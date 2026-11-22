@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="fr-BE">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Les amortissements — Partie 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0e17; --bg2:#141927; --bg3:#0f1320; --card:#171d2e; --card2:#1d2438;
+  --accent:#22d68a; --accent2:#18b574; --orange:#ff8a3d; --gold:#ffd166; --violet:#8b7bff; --cyan:#3fc8ff;
+  --text:#eef1f8; --text2:#a3abc2; --text3:#6b7391; --border:#2a3250;
+  --radius:16px; --success:#22d68a; --error:#ff4d6d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5;
+  background-image:radial-gradient(circle at 15% -10%,rgba(139,123,255,.18),transparent 45%),radial-gradient(circle at 100% 20%,rgba(34,214,138,.12),transparent 40%);background-attachment:fixed}
+button{font-family:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+b,strong{font-weight:700}
+
+/* ===== HUD ===== */
+.hud{position:sticky;top:0;z-index:100;background:rgba(11,14,23,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.hud-row{max-width:980px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px}
+.logo{font-size:1.6rem;filter:drop-shadow(0 0 8px rgba(34,214,138,.5))}
+.app-title{font-weight:800;font-size:1.05rem;letter-spacing:.3px}
+.app-title small{display:block;font-weight:400;font-size:.72rem;color:var(--text2);letter-spacing:.5px}
+.spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:999px;padding:5px 11px;font-size:.85rem;font-weight:700;white-space:nowrap}
+.chip.mono{font-family:'Space Mono',monospace;font-weight:400;color:var(--text2)}
+.chip.streak.hot{border-color:var(--orange);color:var(--orange);animation:pulse 1s infinite}
+.icon-btn{background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:10px;width:36px;height:34px;font-size:1rem}
+.icon-btn:hover{border-color:var(--accent)}
+.xpwrap{max-width:980px;margin:0 auto;padding:0 16px 10px;display:flex;align-items:center;gap:10px}
+.rank{font-weight:800;font-size:.85rem;white-space:nowrap}
+.xpbar{position:relative;flex:1;height:12px;background:var(--bg3);border:1px solid var(--border);border-radius:999px;overflow:visible}
+.xpfill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--cyan));box-shadow:0 0 12px rgba(34,214,138,.6);transition:width .6s cubic-bezier(.2,.9,.3,1.2)}
+.xpmark{position:absolute;top:-3px;width:2px;height:16px;background:var(--gold);opacity:.7;border-radius:2px}
+.xpmark span{position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:.7rem}
+.xpnext{font-size:.72rem;color:var(--text2);white-space:nowrap}
+.pills{max-width:980px;margin:0 auto;padding:0 16px 10px;display:flex;gap:8px;flex-wrap:wrap}
+.pill{border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:999px;padding:4px 12px;font-size:.78rem;font-weight:600}
+.pill.done{border-color:var(--accent);color:var(--accent)}
+.pill.cur{border-color:var(--gold);color:var(--gold);box-shadow:0 0 10px rgba(255,209,102,.3)}
+.pill.locked{opacity:.4;cursor:not-allowed}
+
+/* ===== Layout ===== */
+main{max-width:980px;margin:0 auto;padding:22px 16px 80px}
+.card{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.btn{border:none;border-radius:12px;padding:12px 22px;font-weight:800;font-size:1rem;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06130d;box-shadow:0 6px 18px rgba(34,214,138,.3);transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(34,214,138,.45)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border);box-shadow:none}
+.btn.ghost:hover{border-color:var(--accent)}
+.btn.orange{background:linear-gradient(135deg,var(--orange),#f36b1c);color:#1b0b00;box-shadow:0 6px 18px rgba(255,138,61,.3)}
+.btn.sm{padding:8px 14px;font-size:.88rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.center{text-align:center}
+.muted{color:var(--text2)}
+h1{font-size:2.3rem;font-weight:900;line-height:1.1}
+h2{font-size:1.5rem;font-weight:800}
+h3{font-size:1.1rem;font-weight:800}
+.grad{background:linear-gradient(90deg,var(--accent),var(--cyan),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ===== Welcome ===== */
+.hero{text-align:center;padding:30px 10px 10px}
+.hero .big{font-size:4rem;display:block;margin-bottom:6px;animation:float 3s ease-in-out infinite}
+.hero p.lead{max-width:620px;margin:14px auto 0;color:var(--text2);font-size:1.05rem}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:26px 0}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 8px;text-align:center}
+.stat b{display:block;font-size:1.5rem;font-weight:900}
+.stat span{font-size:.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+.who{display:inline-flex;gap:8px;align-items:center;background:rgba(34,214,138,.08);border:1px solid rgba(34,214,138,.3);padding:6px 14px;border-radius:999px;font-size:.85rem;margin-top:10px}
+.lbbtns{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.lbbtn{padding:10px 20px;border-radius:10px;font-weight:700;background:transparent}
+.lbbtn.app{border:1px solid var(--accent);color:var(--accent)} .lbbtn.app:hover{background:var(--accent);color:#06130d}
+.lbbtn.glob{border:1px solid var(--orange);color:var(--orange)} .lbbtn.glob:hover{background:var(--orange);color:#1b0b00}
+
+/* ===== Hub path ===== */
+.path{position:relative;margin:26px 0 10px;padding:10px 0}
+.path::before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:3px dashed var(--border);transform:translateX(-50%)}
+.step{position:relative;display:flex;align-items:center;margin:18px 0;min-height:110px}
+.node{position:absolute;left:50%;transform:translateX(-50%);width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.2rem;background:var(--bg2);border:3px solid var(--border);z-index:2}
+.node.done{background:var(--accent);border-color:var(--accent);color:#06130d}
+.node.todo{border-color:var(--gold);color:var(--gold);animation:glow 1.6s infinite}
+.node.locked{opacity:.6}
+.lvcard{width:calc(50% - 50px);cursor:pointer;transition:transform .2s,border-color .2s}
+.lvcard:hover{transform:translateY(-3px);border-color:var(--accent)}
+.lvcard.locked{cursor:not-allowed;opacity:.5}
+.lvcard.locked:hover{transform:none;border-color:var(--border)}
+.step.right{justify-content:flex-end}
+.lvcard .ic{font-size:2rem}
+.lvcard .stars{color:var(--gold);letter-spacing:2px}
+.lvmeta{display:flex;justify-content:space-between;margin-top:8px;font-size:.82rem;color:var(--text2)}
+.trophies{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.trophy{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px;text-align:center}
+.trophy .ti{font-size:1.9rem}
+.trophy.off{opacity:.38;filter:grayscale(1)}
+.trophy b{display:block;font-size:.88rem;margin-top:4px}
+.trophy small{color:var(--text2);font-size:.72rem;display:block;line-height:1.3}
+
+/* ===== Brief ===== */
+.brief-head{display:flex;gap:16px;align-items:center;margin-bottom:16px}
+.brief-head .ic{font-size:3rem}
+.tagline{color:var(--text2);font-size:.9rem}
+.objectives{background:rgba(139,123,255,.08);border:1px solid rgba(139,123,255,.35);border-radius:14px;padding:14px 18px;margin:14px 0}
+.objectives li{margin-left:20px;margin-top:4px}
+.theory{margin:14px 0;font-size:1rem}
+.theory ul{margin:8px 0 0 20px}
+.theory li{margin:5px 0}
+.formula{display:inline-block;font-family:'Space Mono',monospace;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:1px 8px;font-size:.9rem}
+.box{border-radius:14px;padding:12px 16px;margin:12px 0;font-size:.95rem}
+.box.ex{background:rgba(255,138,61,.08);border:1px solid rgba(255,138,61,.4)}
+.box.plus{background:rgba(255,209,102,.07);border:1px dashed rgba(255,209,102,.5)}
+.box .bt{font-weight:800;font-size:.8rem;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.box.ex .bt{color:var(--orange)} .box.plus .bt{color:var(--gold)}
+.figure{display:flex;justify-content:center;margin:10px 0}
+.predict{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.predict button{flex:1;min-width:150px;padding:12px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);color:var(--text);font-weight:700}
+.predict button.sel{border-color:var(--gold);background:rgba(255,209,102,.12);color:var(--gold)}
+
+/* ===== Questions ===== */
+.qdots{display:flex;gap:6px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
+.qdot{width:26px;height:8px;border-radius:99px;background:var(--border)}
+.qdot.correct{background:var(--success)} .qdot.hint{background:var(--orange)} .qdot.shown{background:var(--error)}
+.qdot.cur{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+.qtag{font-size:.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:700}
+.qhead{display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
+.qtitle{font-size:.85rem;font-weight:800;color:var(--violet);margin-top:4px}
+.qtext{font-size:1.1rem;font-weight:600;margin:8px 0 12px}
+.data{display:block;background:var(--bg3);border:1px solid var(--border);border-left:4px solid var(--cyan);border-radius:10px;padding:10px 14px;margin:10px 0 16px;font-size:.95rem;line-height:1.7}
+.opts{display:grid;gap:10px}
+.opt{text-align:left;padding:14px 16px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);color:var(--text);font-size:1rem;transition:border-color .15s,transform .15s}
+.opt:hover:not(:disabled){border-color:var(--accent);transform:translateX(3px)}
+.opt:disabled{cursor:default}
+.opt.wrong{border-color:var(--error);background:rgba(255,77,109,.1);opacity:.75}
+.opt.right{border-color:var(--success);background:rgba(34,214,138,.12)}
+.opt.missed{border:2px dashed var(--success)}
+.opt.sel{border-color:var(--cyan);background:rgba(63,200,255,.1)}
+.opt .box2{display:inline-block;width:18px;height:18px;border:2px solid var(--text3);border-radius:5px;margin-right:10px;vertical-align:-3px}
+.opt.sel .box2{background:var(--cyan);border-color:var(--cyan)}
+.vf{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vf .opt{text-align:center;font-weight:800;font-size:1.15rem;padding:18px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:12px}
+.fld{display:flex;flex-direction:column;gap:5px;font-size:.9rem;color:var(--text2);font-weight:600}
+.inwrap{display:flex;align-items:center;gap:6px}
+.inwrap input{width:100%;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-family:'Space Mono',monospace;font-size:.95rem;text-align:right}
+.inwrap input:focus{border-color:var(--cyan);outline:none;box-shadow:0 0 0 3px rgba(63,200,255,.15)}
+.inwrap em{font-style:normal;color:var(--text2);font-weight:700}
+.lk{display:inline-block;padding:9px 12px;border-radius:10px;font-family:'Space Mono',monospace;font-size:.92rem;text-align:right;width:100%}
+.lk.ok{background:rgba(34,214,138,.12);border:1px solid var(--success);color:var(--success)}
+.lk.ok2{background:rgba(255,138,61,.12);border:1px solid var(--orange);color:var(--orange)}
+.lk.ko{background:rgba(255,77,109,.1);border:1px solid var(--error);color:var(--error)}
+.lk.ko s{opacity:.6}
+.tablewrap{overflow-x:auto;margin:6px 0}
+table.amt{width:100%;border-collapse:separate;border-spacing:0;font-size:.9rem;min-width:520px}
+table.amt th{background:linear-gradient(135deg,#3a3180,#2a2560);color:#fff;padding:9px 8px;font-size:.8rem;text-align:center}
+table.amt th:first-child{border-top-left-radius:10px} table.amt th:last-child{border-top-right-radius:10px}
+table.amt td{padding:5px;border-bottom:1px solid var(--border);text-align:right}
+table.amt td.yr{text-align:center;font-weight:800;color:var(--text2);width:60px}
+table.amt td.given{font-family:'Space Mono',monospace;color:var(--text2);padding-right:12px}
+table.amt .inwrap input{padding:8px;font-size:.85rem}
+table.amt .lk{padding:8px;font-size:.85rem}
+.calcprev{min-height:1.4em;font-family:'Space Mono',monospace;font-size:.85rem;color:var(--cyan);margin-top:6px}
+.pool{display:flex;flex-wrap:wrap;gap:8px;min-height:52px;padding:12px;background:var(--bg3);border:1px dashed var(--border);border-radius:12px;margin-bottom:12px}
+.pool .lbl{width:100%;font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+.tag{padding:8px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:.9rem;font-weight:600;transition:transform .15s}
+.tag:hover{border-color:var(--cyan)}
+.tag.sel{border-color:var(--gold);background:rgba(255,209,102,.15);transform:scale(1.04)}
+.tag.ok{border-color:var(--success);background:rgba(34,214,138,.12);cursor:default}
+.tag.ok2{border-color:var(--orange);background:rgba(255,138,61,.12);cursor:default}
+.tag.ko{border-color:var(--error);background:rgba(255,77,109,.1);cursor:default}
+.tag .fix{display:block;font-size:.75rem;color:var(--gold);font-weight:700}
+.zones{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.zone{min-height:140px;border:2px dashed var(--border);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:border-color .15s,background .15s}
+.zone:hover{border-color:var(--cyan);background:rgba(63,200,255,.04)}
+.zone h4{font-size:.85rem;text-transform:uppercase;letter-spacing:1px;color:var(--text2);text-align:center}
+.match{display:grid;gap:10px}
+.mrow{display:grid;grid-template-columns:1.3fr 1fr;gap:10px;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+.mrow select{padding:9px;border-radius:9px;background:var(--bg3);color:var(--text);border:1px solid var(--border);font-family:inherit;font-size:.95rem}
+.slots{display:grid;gap:8px;margin-bottom:12px}
+.slot{display:flex;gap:10px;align-items:center;min-height:46px;padding:6px 10px;border:2px dashed var(--border);border-radius:12px;cursor:pointer}
+.slot:hover{border-color:var(--cyan)}
+.slot .n{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.slot .tag{flex:1}
+.trous{font-size:1.05rem;line-height:2.4;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.blank{display:inline-block;min-width:110px;padding:2px 10px;margin:0 3px;border-bottom:2px solid var(--cyan);text-align:center;cursor:pointer;border-radius:6px 6px 0 0;background:rgba(63,200,255,.06);line-height:1.6}
+.blank.ok{border-color:var(--success);color:var(--success);background:rgba(34,214,138,.1);cursor:default}
+.blank.ok2{border-color:var(--orange);color:var(--orange);background:rgba(255,138,61,.1);cursor:default}
+.blank.ko{border-color:var(--error);color:var(--error);background:rgba(255,77,109,.08);cursor:default}
+.blank .fix{color:var(--gold);font-weight:700}
+.doc{background:#f7f5ee;color:#1d2230;border-radius:12px;padding:16px 18px;font-size:.98rem;box-shadow:inset 0 0 0 1px #d8d2bf}
+.doc h4{font-size:.95rem;margin-bottom:8px;color:#3a3180}
+.line{display:block;width:100%;text-align:left;background:transparent;border:none;border-left:3px solid transparent;padding:7px 10px;margin:2px 0;border-radius:6px;color:#1d2230;font-size:.97rem}
+.line:hover{background:rgba(58,49,128,.08)}
+.line.sel{background:rgba(255,77,109,.14);border-left-color:#d6334f}
+.line.ok{background:rgba(34,214,138,.18);border-left-color:#14915c;cursor:default}
+.line.ok2{background:rgba(255,138,61,.2);border-left-color:#d86a1e;cursor:default}
+.line.ko{background:rgba(255,77,109,.15);border-left-color:#d6334f;cursor:default}
+.line .fix{display:block;font-size:.85rem;font-weight:700;color:#7a4b00}
+.line.fa{text-decoration:line-through;opacity:.6}
+.fb{margin-top:16px;border-radius:12px;padding:0;font-size:.97rem}
+.fb:not(:empty){padding:12px 16px}
+.fb.good{background:rgba(34,214,138,.1);border:1px solid rgba(34,214,138,.4)}
+.fb.mid{background:rgba(255,138,61,.1);border:1px solid rgba(255,138,61,.4)}
+.fb.bad{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.4)}
+.fb.info{background:rgba(63,200,255,.08);border:1px solid rgba(63,200,255,.35)}
+.actions{display:flex;justify-content:space-between;align-items:center;margin-top:18px;gap:10px;flex-wrap:wrap}
+
+/* ===== Bilan ===== */
+.medal{font-size:4.5rem;display:block;animation:pop .6s cubic-bezier(.2,1.6,.4,1)}
+.grade{display:inline-block;font-size:1.1rem;font-weight:900;padding:6px 16px;border-radius:999px;margin-top:8px}
+.grade.A{background:rgba(34,214,138,.15);color:var(--accent)} .grade.B{background:rgba(63,200,255,.15);color:var(--cyan)}
+.grade.C{background:rgba(255,138,61,.15);color:var(--orange)} .grade.D{background:rgba(255,77,109,.15);color:var(--error)}
+.legend{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:.85rem;color:var(--text2);margin:14px 0}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.rtable{width:100%;border-collapse:collapse;margin-top:10px;font-size:.92rem}
+.rtable th,.rtable td{padding:9px 6px;border-bottom:1px solid var(--border);text-align:center}
+.rtable td:first-child,.rtable th:first-child{text-align:left}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+.crit{border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:12px;background:var(--bg2)}
+.crit-h{display:flex;justify-content:space-between;gap:10px;align-items:center;font-weight:800}
+.st{font-size:.8rem;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.st.atteint{background:rgba(34,214,138,.15);color:var(--accent)}
+.st.encours{background:rgba(255,138,61,.15);color:var(--orange)}
+.st.nonatteint{background:rgba(255,77,109,.15);color:var(--error)}
+.ind{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:8px 0 4px 10px;border-top:1px dashed var(--border);margin-top:8px;font-size:.92rem}
+.revoir{font-size:.85rem;color:var(--gold);margin:2px 0 4px 10px}
+.sim{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:center}
+.sim input[type=range]{width:100%;accent-color:var(--accent)}
+
+/* ===== Overlays & FX ===== */
+.overlay{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:28px;max-width:440px;width:100%;text-align:center;animation:slideup .4s ease;position:relative}
+.rankup .rays{position:absolute;width:700px;height:700px;background:repeating-conic-gradient(rgba(255,209,102,.13) 0 10deg,transparent 10deg 20deg);border-radius:50%;animation:spin 14s linear infinite;pointer-events:none}
+.rankup .modal{border-color:var(--gold);box-shadow:0 0 60px rgba(255,209,102,.35)}
+.rankup .ri{font-size:5rem;display:block;animation:pop .7s cubic-bezier(.2,1.6,.4,1)}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(150%);z-index:9500;background:linear-gradient(135deg,#2a2560,#171d2e);border:1px solid var(--gold);color:var(--text);padding:12px 20px;border-radius:14px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.5);transition:transform .45s cubic-bezier(.2,1.4,.4,1);max-width:92vw}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast .ti{font-size:2rem}
+.particle{position:fixed;width:8px;height:8px;border-radius:50%;pointer-events:none;z-index:9800}
+.floatxp{position:fixed;pointer-events:none;z-index:9800;font-weight:900;color:var(--accent);font-size:1.3rem;text-shadow:0 0 10px rgba(34,214,138,.7);animation:floatup 1.1s ease-out forwards}
+.combo{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:9700;font-size:2.6rem;font-weight:900;color:var(--orange);text-shadow:0 0 25px rgba(255,138,61,.8);pointer-events:none;animation:combo 1.2s ease-out forwards;white-space:nowrap}
+.confetti{position:fixed;top:-12px;width:9px;height:14px;z-index:9600;pointer-events:none;animation:fall linear forwards}
+.shake{animation:shake .45s}
+@keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-7px)}40%,60%{transform:translateX(7px)}}
+@keyframes pulse{50%{transform:scale(1.07)}}
+@keyframes glow{50%{box-shadow:0 0 18px rgba(255,209,102,.6)}}
+@keyframes float{50%{transform:translateY(-8px)}}
+@keyframes pop{0%{transform:scale(.2);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes slideup{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes floatup{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-60px)}}
+@keyframes combo{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}25%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-70%) scale(1)}}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+
+/* Leaderboard */
+#lbContent table{width:100%;border-collapse:collapse;font-size:.85rem}
+
+/* Fiche imprimable */
+.fiche-head{display:none}
+@media print{
+  body{background:#fff}
+  body *{visibility:hidden}
+  .fiche,.fiche *{visibility:visible}
+  .fiche{position:absolute;left:0;top:0;width:100%;background:#fff !important;color:#000 !important;border:none;box-shadow:none}
+  .fiche *{color:#000 !important;background:transparent !important;border-color:#999 !important}
+  .fiche .noprint{display:none !important}
+  .fiche-head{display:block;margin-bottom:12px}
+}
+
+/* Responsive */
+@media (max-width:768px){
+  h1{font-size:1.8rem}
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .trophies{grid-template-columns:repeat(2,1fr)}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .card{padding:18px}
+}
+@media (max-width:480px){
+  .app-title{display:none}
+  .chip{padding:4px 8px;font-size:.75rem}
+  .xpnext{display:none}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .path::before{left:26px}
+  .node{left:26px}
+  .step,.step.right{justify-content:flex-end}
+  .lvcard{width:calc(100% - 62px)}
+  .zones,.sim{grid-template-columns:1fr}
+  .mrow{grid-template-columns:1fr}
+  .vf{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<header class="hud">
+  <div class="hud-row">
+    <span class="logo">📉</span>
+    <div class="app-title">Les amortissements<small>Partie 1 · Base, linéaire, dégressif</small></div>
+    <div class="spacer"></div>
+    <span id="globalTimer" class="chip mono" style="display:none;">⏱️ 00:00</span>
+    <span id="hudStreak" class="chip streak">🔥 0</span>
+    <span id="hudXP" class="chip">⭐ 0 XP</span>
+    <button class="icon-btn" id="soundBtn" onclick="toggleSound()" title="Activer / couper le son" aria-label="Son">🔇</button>
+    <button class="icon-btn" onclick="goHub()" title="Parcours" aria-label="Parcours">🗺️</button>
+  </div>
+  <div class="xpwrap">
+    <span class="rank" id="hudRank">🎒 Stagiaire</span>
+    <div class="xpbar" id="xpbar"><div class="xpfill" id="xpfill" style="width:0%"></div></div>
+    <span class="xpnext" id="xpnext"></span>
+  </div>
+  <nav class="pills" id="pills"></nav>
+</header>
+
+<main id="main"></main>
+
+<div id="toast"><span class="ti" id="toastIcon"></span><div><b id="toastTitle"></b><div class="muted" id="toastText" style="font-size:.85rem"></div></div></div>
+<div id="fxModal"></div>
+
+<!-- ===== MODAL EMAIL ===== -->
+<div id="emailOverlay" class="overlay" style="display:none;z-index:10000;">
+  <div class="modal">
+    <div style="font-size:2.4rem;margin-bottom:8px;">🎓</div>
+    <h2 style="font-size:1.3rem;margin-bottom:4px;">Identification</h2>
+    <p style="font-size:.88rem;color:var(--text2);margin-bottom:18px;">Entre ton adresse email scolaire pour commencer.</p>
+    <input type="email" id="emailInput" placeholder="prenom.nom@eleve.istlm.be"
+      style="width:100%;padding:12px 16px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:1rem;outline:none;margin-bottom:12px;font-family:inherit;"
+      onkeydown="if(event.key==='Enter')validateEmail()">
+    <div id="emailError" style="color:#ff4060;font-size:.82rem;margin-bottom:12px;min-height:1.2em;"></div>
+    <button id="emailBtn" class="btn" style="width:100%" onclick="validateEmail()">✅ Vérifier et commencer</button>
+  </div>
+</div>
+
+<!-- ===== MODAL CLASSEMENT ===== -->
+<div id="lbOverlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);" onclick="if(event.target===this)closeLB()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;width:95%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 0 40px rgba(0,0,0,0.5);">
+    <button onclick="closeLB()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--text2);font-size:1.5rem;cursor:pointer;" aria-label="Fermer">✕</button>
+    <h3 id="lbTitle" style="margin-bottom:14px;padding-right:30px;"></h3>
+    <div style="display:flex;gap:8px;margin-bottom:20px;">
+      <button id="lbTabApp" onclick="switchLBTab('app')" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:#0f1117;font-weight:700;cursor:pointer;font-family:inherit;font-size:0.85rem;">🏆 Cette application</button>
+      <button id="lbTabGlobal" onclick="switchLBTab('global')" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--orange);background:transparent;color:var(--orange);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.85rem;">🌍 Classement général</button>
+    </div>
+    <div id="lbContent"><div style="text-align:center;padding:40px;color:var(--text2);">Chargement…</div></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   1. OUTILS
+   ===================================================================== */
+const SP = /[\s  €%]/g;
+function evalExpr(s) {
+  let e = String(s).replace(SP,'').replace(/×/g,'*').replace(/÷/g,'/').replace(/,/g,'.');
+  if (!/^[0-9+\-*/().]+$/.test(e) || !/[+\-*/]/.test(e.slice(1))) return null;
+  try { const r = Function('"use strict";return (' + e + ')')(); return (typeof r === 'number' && isFinite(r)) ? r : null; }
+  catch (err) { return null; }
+}
+function parseNum(s) {
+  if (s === null || s === undefined) return NaN;
+  const r = evalExpr(s); if (r !== null) return r;
+  let t = String(s).replace(SP,'');
+  if (t === '') return NaN;
+  if (t.includes(',')) t = t.replace(/\./g,'').replace(',', '.');
+  else if ((t.match(/\./g)||[]).length > 1) t = t.replace(/\./g,'');
+  if (!/^-?\d*\.?\d+$/.test(t)) return NaN;
+  return parseFloat(t);
+}
+function shuffled(n, seed) {
+  const a = [...Array(n).keys()]; let s = seed;
+  for (let i = n-1; i > 0; i--) { s = (s*9301 + 49297) % 233280; const j = Math.floor(s/233280*(i+1)); [a[i],a[j]] = [a[j],a[i]]; }
+  return a;
+}
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k,v) => { try { localStorage.setItem(k,v); } catch (e) {} };
+const fmtE = n => n.toLocaleString('fr-BE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN = n => n.toLocaleString('fr-BE',{maximumFractionDigits:2});
+const fmtXP = n => Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.',',');
+function fmtAns(inp){ if(inp.u==='%') return fmtN(inp.a)+' %'; if(inp.u==='') return fmtN(inp.a); return fmtE(inp.a)+(inp.u==='€'?' €':''); }
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+/* =====================================================================
+   2. CRITÈRES ET INDICATEURS (bilan final, CONVENTIONS §4.11)
+   ===================================================================== */
+const CRITERES = [
+  { id:'C1', nom:"Comprendre la base de l'amortissement", indicateurs:[
+    { id:'I1', texte:"Je reconnais un bien amortissable et j'explique le rôle de l'amortissement",
+      brief:"reconnaître un bien amortissable et expliquer à quoi sert l'amortissement",
+      chapitre:"L'amortissement : définition, rôle et base de calcul", revoir:"la définition (usage, temps, obsolescence) et les trois fonctions de l'amortissement" },
+    { id:'I2', texte:"Je calcule la base amortissable (coût d'acquisition)",
+      brief:"calculer la base amortissable d'un bien",
+      chapitre:"L'amortissement : définition, rôle et base de calcul", revoir:"la formule prix d'achat HTVA + frais accessoires, et le cas de la TVA récupérable" }
+  ]},
+  { id:'C2', nom:"Maîtriser l'amortissement linéaire", indicateurs:[
+    { id:'I3', texte:"Je calcule le taux d'amortissement et l'annuité",
+      brief:"calculer le taux d'amortissement et l'annuité",
+      chapitre:"L'amortissement linéaire", revoir:"les règles de calcul a = V₀ / N, a = V₀ × t et t = 100 / N" },
+    { id:'I4', texte:"Je calcule les amortissements cumulés et la valeur comptable nette",
+      brief:"calculer les amortissements cumulés et la valeur comptable nette (VCN)",
+      chapitre:"L'amortissement linéaire", revoir:"le mot-clé « valeur comptable nette » et la lecture d'un plan d'amortissement" },
+    { id:'I5', texte:"Je dresse un plan d'amortissement linéaire complet",
+      brief:"dresser un plan d'amortissement linéaire complet",
+      chapitre:"L'amortissement linéaire", revoir:"l'exemple 1 et l'exercice « le plan de Monsieur Durant »" }
+  ]},
+  { id:'C3', nom:"Appliquer l'amortissement dégressif", indicateurs:[
+    { id:'I6', texte:"J'applique la méthode dégressive : double taux, plafond de 40 % et passage au linéaire",
+      brief:"appliquer la méthode dégressive : double taux, plafond de 40 % et passage au linéaire",
+      chapitre:"L'amortissement dégressif", revoir:"la méthode en 4 points, puis les exercices 1, 2 et 3 (TOUTESTBON)" }
+  ]}
+];
+const IND = {}; CRITERES.forEach(c => c.indicateurs.forEach(i => IND[i.id] = i));
+
+/* =====================================================================
+   3. CONTENU PÉDAGOGIQUE (LEVELS)
+   QCM : bonne réponse rédigée en position 0, puis rotation déterministe.
+   ===================================================================== */
+const SVG_LIN = `<svg viewBox="0 0 320 150" width="320" height="150" role="img" aria-label="Schéma : la VCN diminue chaque année en parts égales">
+  <defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#6b7391" stroke-width="2"/></pattern></defs>
+  <line x1="20" y1="120" x2="310" y2="120" stroke="#2a3250" stroke-width="2"/>
+  <rect x="30" y="20" width="36" height="100" rx="4" fill="#22d68a"/>
+  <rect x="90" y="20" width="36" height="20" rx="4" fill="url(#hatch)"/><rect x="90" y="40" width="36" height="80" rx="4" fill="#22d68a" opacity=".85"/>
+  <rect x="150" y="20" width="36" height="40" rx="4" fill="url(#hatch)"/><rect x="150" y="60" width="36" height="60" rx="4" fill="#22d68a" opacity=".7"/>
+  <rect x="210" y="20" width="36" height="60" rx="4" fill="url(#hatch)"/><rect x="210" y="80" width="36" height="40" rx="4" fill="#22d68a" opacity=".55"/>
+  <text x="275" y="80" fill="#a3abc2" font-size="22" font-family="Outfit">…</text>
+  <text x="48" y="138" fill="#a3abc2" font-size="11" text-anchor="middle" font-family="Outfit">achat</text>
+  <text x="108" y="138" fill="#a3abc2" font-size="11" text-anchor="middle" font-family="Outfit">an 1</text>
+  <text x="168" y="138" fill="#a3abc2" font-size="11" text-anchor="middle" font-family="Outfit">an 2</text>
+  <text x="228" y="138" fill="#a3abc2" font-size="11" text-anchor="middle" font-family="Outfit">an 3</text>
+  <rect x="200" y="2" width="10" height="10" fill="#22d68a"/><text x="214" y="11" fill="#a3abc2" font-size="10" font-family="Outfit">VCN</text>
+  <rect x="245" y="2" width="10" height="10" fill="url(#hatch)"/><text x="259" y="11" fill="#a3abc2" font-size="10" font-family="Outfit">déjà amorti</text>
+</svg>`;
+const SVG_DEG = `<svg viewBox="0 0 320 140" width="320" height="140" role="img" aria-label="Schéma : annuités dégressives élevées au début puis constantes après le passage au linéaire">
+  <line x1="20" y1="115" x2="310" y2="115" stroke="#2a3250" stroke-width="2"/>
+  <line x1="20" y1="72" x2="310" y2="72" stroke="#ffd166" stroke-dasharray="5 4" stroke-width="1.5"/>
+  <text x="308" y="66" fill="#ffd166" font-size="10" text-anchor="end" font-family="Outfit">annuité linéaire</text>
+  <rect x="30" y="20" width="30" height="95" rx="4" fill="#8b7bff"/>
+  <rect x="72" y="40" width="30" height="75" rx="4" fill="#8b7bff"/>
+  <rect x="114" y="56" width="30" height="59" rx="4" fill="#8b7bff"/>
+  <rect x="156" y="72" width="30" height="43" rx="4" fill="#ffd166"/>
+  <rect x="198" y="72" width="30" height="43" rx="4" fill="#ffd166"/>
+  <rect x="240" y="98" width="30" height="17" rx="4" fill="#ffd166"/>
+  <text x="87" y="132" fill="#8b7bff" font-size="11" text-anchor="middle" font-family="Outfit">dégressif</text>
+  <text x="213" y="132" fill="#ffd166" font-size="11" text-anchor="middle" font-family="Outfit">fin en linéaire</text>
+</svg>`;
+
+const LEVELS = [
+/* ---------------- MISSION 1 ---------------- */
+{ id:'m1', icon:'🧱', title:"Les bases de l'amortissement", desc:"Biens amortissables, base, taux, annuité, cumul et VCN",
+  theory:`<p>L'<b>amortissement</b> constate, à la fin de chaque exercice, la <b>perte de valeur définitive</b> d'une immobilisation (corporelle ou incorporelle) due à l'<b>usage</b>, au <b>temps</b> ou à l'<b>obsolescence</b>.</p>
+  <ul>
+   <li><b>Base amortissable</b> = coût d'acquisition = <span class="formula">prix d'achat HTVA + frais accessoires</span> (installation, montage, transport, assurance, TVA non récupérable).</li>
+   <li><b>Taux</b> : <span class="formula">t = 100 / N</span> (N = durée probable d'utilisation) · <b>Annuité</b> : <span class="formula">a = V₀ / N = V₀ × t</span></li>
+   <li><b>Amortissements cumulés</b> = somme des annuités déjà actées · <b>VCN</b> = <span class="formula">valeur d'origine − amortissements cumulés</span></li>
+  </ul>`,
+  example:`Un entrepôt : prix 38 000 € HTVA + montage 2 000 € → base <b>40 000 €</b>. Durée 20 ans → taux 100 / 20 = <b>5 %</b> ; annuité 40 000 × 5 % = <b>2 000 €</b>. Après 2 ans : amortissements cumulés <b>4 000 €</b> ; VCN 40 000 − 4 000 = <b>36 000 €</b>.`,
+  plus:`Les amortissements sont aussi un élément du <b>prix de revient</b> : sans eux, les livres comptables garderaient des valeurs surfaites, qui gonfleraient artificiellement les bénéfices.`,
+  questions:[
+  { type:'classement', ind:'I1',
+    q:"Une boulangerie fait la liste de ses biens. Range chaque élément : s'amortit-il ou non ?",
+    zones:["Amortissable","Non amortissable"],
+    items:[ {t:"une camionnette de livraison",z:0},{t:"le terrain sur lequel est bâti l'entrepôt",z:1},{t:"un logiciel de gestion acheté",z:0},
+            {t:"un stock de sacs de farine",z:1},{t:"un brevet acheté à un inventeur",z:0},{t:"l'ordinateur du secrétariat",z:0},{t:"le mobilier du bureau",z:0} ],
+    hint:"Pour chaque bien, demande-toi : est-ce une immobilisation qui perd de la valeur par l'usage, le temps ou l'obsolescence ?",
+    expl:"S'amortissent les immobilisations corporelles (camionnette, ordinateur, mobilier) et incorporelles (logiciel, brevet). Le <b>terrain</b> ne perd pas de valeur par l'usage, le temps ou l'obsolescence. Le <b>stock de farine</b> n'est pas une immobilisation : il est utilisé rapidement, il ne sert pas plusieurs années." },
+  { type:'fields', ind:'I2',
+    q:"Une imprimerie achète une plieuse automatique. Calcule sa base amortissable.",
+    data:"Prix : <b>6 400,00 € HTVA</b> · Transport : <b>150,00 €</b> · Montage : <b>250,00 €</b> · TVA (21 %) récupérable : <b>1 344,00 €</b>",
+    head:[ {l:"Base amortissable",a:6800,u:'€'} ],
+    traps:[ {k:0,v:8144,m:"Tu as ajouté la TVA : or elle est récupérable, l'entreprise la récupère."},{k:0,v:6400,m:"Il manque les frais accessoires (transport et montage)."} ],
+    hint:"Quels frais accessoires s'ajoutent au prix HTVA ? Et la TVA récupérable, reste-t-elle à charge de l'entreprise ?",
+    expl:"Base = 6 400 + 150 + 250 = <b>6 800,00 €</b>. Le transport et le montage sont des frais accessoires ; la TVA récupérable n'en fait pas partie, puisque l'entreprise la récupère." },
+  { type:'qcm', ind:'I1',
+    q:"Les amortissements sont une source d'autofinancement. Pourquoi ?",
+    options:[ "Ils sont repris dans les charges : le bénéfice distribué diminue d'autant et cette part reste dans l'entreprise pour remplacer le bien.",
+              "Chaque année, l'entreprise verse le montant de l'annuité sur un compte d'épargne bloqué.",
+              "Ils augmentent le bénéfice, donc l'argent disponible pour les associés.",
+              "Ils diminuent la TVA à payer lors de l'achat du bien." ], correct:0,
+    hint:"L'amortissement est-il une charge ou un produit ? Qu'est-ce que cela change au bénéfice qui sera distribué ?",
+    expl:"Les pertes de valeur sont incluses dans les <b>charges d'exploitation</b>. Le bénéfice distribué diminue d'autant : cette part reste dans les ressources de l'entreprise et servira à remplacer le bien devenu inutilisable. Aucun compte d'épargne n'est alimenté, et l'amortissement ne change rien à la TVA." },
+  { type:'fields', ind:'I3',
+    q:"Un cabinet comptable achète des ordinateurs, amortis en linéaire. Calcule le taux d'amortissement et l'annuité.",
+    data:"Coût d'acquisition : <b>2 400,00 €</b> · Durée probable d'utilisation : <b>3 ans</b>",
+    head:[ {l:"Taux d'amortissement",a:33.33,u:'%',tol:0.34}, {l:"Annuité",a:800,u:'€'} ],
+    traps:[ {k:0,v:3,m:"3, c'est la durée : le taux s'obtient à partir de la durée."} ],
+    hint:"Le taux se déduit de la durée : par quoi divises-tu 100 ? Et l'annuité : quelle part de la valeur d'origine amortis-tu chaque année ?",
+    expl:"Taux = 100 / 3 = <b>33,33 %</b> (33 1/3 %). Annuité = 2 400 / 3 = <b>800,00 €</b> (ou 2 400 × 33 1/3 %)." },
+  { type:'appariement', ind:'I3',
+    q:"Associe chaque durée à son taux, et chaque taux à sa durée.",
+    pairs:[ ["Durée de 8 ans → taux","12,5 %"],["Durée de 4 ans → taux","25 %"],["Durée de 5 ans → taux","20 %"],
+            ["Taux de 10 % → durée","10 ans"],["Taux de 33 1/3 % → durée","3 ans"],["Taux de 2 % → durée","50 ans"] ],
+    extras:["8 %","40 %","4 ans"],
+    hint:"Une seule formule relie les deux : taux = 100 / N. Pour retrouver la durée, divise 100 par le taux.",
+    expl:"100 / 8 = 12,5 % · 100 / 4 = 25 % · 100 / 5 = 20 % · 100 / 10 = 10 ans · 100 / 33 1/3 = 3 ans · 100 / 2 = 50 ans." },
+  { type:'fields', ind:'I4',
+    q:"Une machine est amortie en linéaire depuis le 1er janvier N. Calcule l'annuité, puis la situation à la fin de l'année 4.",
+    data:"Valeur d'origine : <b>9 000,00 €</b> · Durée : <b>6 ans</b> · Méthode : <b>linéaire</b>",
+    head:[ {l:"Annuité",a:1500,u:'€'}, {l:"Amortissements cumulés fin année 4",a:6000,u:'€'}, {l:"VCN fin année 4",a:3000,u:'€'} ],
+    traps:[ {k:2,v:7500,m:"Tu n'as retiré qu'une seule annuité : à la fin de l'année 4, quatre annuités ont été actées."} ],
+    hint:"Les amortissements cumulés additionnent les annuités déjà actées : combien d'annuités à la fin de l'année 4 ? La VCN, c'est ce qui reste de la valeur d'origine.",
+    expl:"Annuité = 9 000 / 6 = <b>1 500,00 €</b>. Cumulés fin année 4 = 4 × 1 500 = <b>6 000,00 €</b>. VCN = 9 000 − 6 000 = <b>3 000,00 €</b>." }
+  ]},
+/* ---------------- MISSION 2 ---------------- */
+{ id:'m2', icon:'📏', title:"Le plan linéaire du cours", desc:"Le plan de M. Durant et la chambre froide de TOUTESTBON",
+  theory:`<p><b>Principe</b> : en linéaire, on répartit le coût en <b>parts égales</b> sur toute la durée d'utilisation.</p>
+  <ul>
+   <li><span class="formula">a = V₀ / N</span> ou <span class="formula">a = V₀ × t</span>, avec <span class="formula">t = 100 / N</span></li>
+   <li>Le <b>plan d'amortissement</b> est un tableau qui constate les annuités successives et les valeurs comptables nettes.</li>
+   <li>Chaque année : <span class="formula">nouvelle VCN = VCN précédente − annuité</span></li>
+  </ul>`,
+  figure:SVG_LIN,
+  example:`Un photocopieur de 4 000 € amorti sur 8 ans : taux 100 / 8 = 12,5 % ; annuité 500 €. VCN fin année 1 : 3 500 € ; fin année 2 : 3 000 € ; et ainsi de suite.`,
+  plus:`L'administration fiscale conseille des durées selon la nature du bien : par exemple 4 ou 5 ans pour le matériel de transport, souvent 10 ans pour le mobilier.`,
+  questions:[
+  { type:'vf', ind:'I5',
+    q:"Dans le plan linéaire d'un bien mis en service le 1er janvier, la valeur résiduelle à la fin de la dernière année est égale à 0,00 €.",
+    answer:true,
+    expl:"<b>Vrai.</b> Le bien est entièrement amorti : la somme des N annuités est égale à la valeur d'origine (par exemple 4 × 2 500 = 10 000 €), il ne reste donc plus rien à amortir." },
+  { type:'qcm', ind:'I4',
+    q:"Dans un plan d'amortissement, la « valeur résiduelle » est aussi appelée…",
+    options:[ "valeur comptable nette (VCN) : la valeur qui reste à amortir en fin d'exercice",
+              "annuité : le montant amorti chaque année",
+              "base amortissable : le coût d'acquisition du bien",
+              "amortissements cumulés : la somme des annuités déjà actées" ], correct:0,
+    hint:"Regarde la dernière colonne d'un plan : ce montant diminue chaque année jusqu'à zéro. Que représente-t-il ?",
+    expl:"Valeur résiduelle = <b>valeur comptable nette (VCN)</b> = valeur nette comptable = valeur en fin d'exercice : c'est la valeur qui reste à amortir. L'annuité, elle, est constante ; la base ne change pas ; les cumulés augmentent." },
+  { type:'fields', ind:'I3', title:"Exercice du cours : le plan de Monsieur Durant",
+    q:"Tu es aide-comptable chez Monsieur Durant. Le 1er janvier N, il acquiert une camionnette Peugeot qu'il amortit en linéaire. Détermine les bases de calcul.",
+    data:"Prix : <b>25 000,00 € HTVA</b> · Durée probable : <b>5 ans</b>",
+    head:[ {l:"Taux d'amortissement",a:20,u:'%'}, {l:"Annuité",a:5000,u:'€'} ],
+    traps:[ {k:1,v:125000,m:"Tu as multiplié la valeur par la durée : l'annuité est une part de la valeur, pas un multiple."} ],
+    hint:"Le taux : 100 divisé par… ? L'annuité : la valeur du bien divisée par… ?",
+    expl:"Taux = 100 / 5 = <b>20 %</b>. Annuité = 25 000 / 5 = <b>5 000,00 €</b> (ou 25 000 × 20 %)." },
+  { type:'fields', ind:'I5', title:"Exercice du cours : le plan de Monsieur Durant (suite)",
+    q:"Dresse maintenant le tableau d'amortissement linéaire de la camionnette de Monsieur Durant.",
+    data:"Valeur du bien : <b>25 000,00 €</b> · Durée : <b>5 ans</b> · Mise en service : <b>1er janvier N</b>",
+    table:{ cols:["Année","Base d'amortissement","Annuité","Valeur résiduelle"],
+      rows:[ ["1","25 000,00",{a:5000},{a:20000}], ["2","25 000,00",{a:5000},{a:15000}], ["3","25 000,00",{a:5000},{a:10000}],
+             ["4","25 000,00",{a:5000},{a:5000}], ["5","25 000,00",{a:5000},{a:0}] ] },
+    hint:"L'annuité change-t-elle d'une année à l'autre en linéaire ? Pour la valeur résiduelle, retire l'annuité à la valeur de l'année précédente.",
+    expl:"Annuité constante de <b>5 000,00 €</b> ; valeur résiduelle : 20 000 → 15 000 → 10 000 → 5 000 → <b>0,00 €</b>." },
+  { type:'fields', ind:'I4', title:"Exercice du cours : TOUTESTBON, fiche 3",
+    q:"Le traiteur TOUTESTBON amortit sa chambre froide en linéaire. Complète les éléments de sa fiche d'amortissement.",
+    data:"Nature : <b>installation – chambre froide</b> · Coût d'achat : <b>240 000,00 €</b> · Mise en service : <b>01-01-N</b> · Durée prévue : <b>10 ans</b> · Système : <b>linéaire</b>",
+    head:[ {l:"Taux pratiqué",a:10,u:'%'}, {l:"Annuité",a:24000,u:'€'}, {l:"VCN fin année 3",a:168000,u:'€'}, {l:"VCN fin année 7",a:72000,u:'€'}, {l:"VCN fin année 10",a:0,u:'€'} ],
+    hint:"Après 3 ans, combien d'annuités ont été retirées de la valeur d'origine ? Fais de même pour 7 ans et pour 10 ans.",
+    expl:"Taux = 100 / 10 = <b>10 %</b> ; annuité = 240 000 × 10 % = <b>24 000,00 €</b>. VCN fin année 3 = 240 000 − 3 × 24 000 = <b>168 000,00 €</b> ; fin année 7 = 240 000 − 7 × 24 000 = <b>72 000,00 €</b> ; fin année 10 = <b>0,00 €</b>." }
+  ]},
+/* ---------------- MISSION 3 ---------------- */
+{ id:'m3', icon:'🚀', title:"Linéaire : à toi de jouer", desc:"3 exercices supplémentaires, sans formules sous les yeux",
+  theory:`<p>Ici, <b>plus de formules</b> : tu reconstitues toi-même la méthode du linéaire. C'est ce que tu devras faire seul à l'interrogation.</p>
+  <ul><li>Lis <b>toutes</b> les données avant de calculer : tous les montants ne servent pas forcément.</li>
+  <li>Tu peux taper un <b>calcul</b> dans une case : la mini-calculatrice affiche le résultat en direct, et ton calcul est accepté comme réponse.</li></ul>`,
+  example:`Astuce calculatrice : tape <span class="formula">15000/4</span> dans une case, l'aperçu affiche « = 3 750 ».`,
+  plus:`Dans un logiciel comptable, la fiche d'amortissement de chaque bien porte aussi le numéro de son compte (par exemple 2410 pour le matériel roulant), la date de facture et le fournisseur.`,
+  questions:[
+  { type:'fields', ind:'I2', title:"Exercice supplémentaire A",
+    q:"La Pâtisserie Delcourt SRL achète un pétrin, mis en service le 1er janvier N et amorti en linéaire. Calcule la base amortissable, le taux et l'annuité.",
+    data:"Prix : <b>11 200,00 € HTVA</b> · Transport : <b>300,00 €</b> · Installation : <b>500,00 €</b> · TVA (21 %) récupérable : <b>2 352,00 €</b> · Durée : <b>8 ans</b>",
+    head:[ {l:"Base amortissable",a:12000,u:'€'}, {l:"Taux d'amortissement",a:12.5,u:'%'}, {l:"Annuité",a:1500,u:'€'} ],
+    traps:[ {k:0,v:14352,m:"La TVA récupérable n'entre pas dans le coût d'acquisition."},{k:0,v:11200,m:"Il manque les frais accessoires (transport et installation)."},{k:2,v:1794,m:"Ton annuité part d'une base qui contient la TVA récupérable."} ],
+    hint:"La TVA récupérable fait-elle partie du coût d'acquisition ? Calcule la base avant le taux et l'annuité.",
+    expl:"Base = 11 200 + 300 + 500 = <b>12 000,00 €</b> (la TVA récupérable est exclue). Taux = 100 / 8 = <b>12,5 %</b>. Annuité = 12 000 × 12,5 % = <b>1 500,00 €</b>." },
+  { type:'ordre', ind:'I5',
+    q:"Remets dans l'ordre les étapes pour dresser un plan d'amortissement linéaire. Attention : deux étiquettes ne font pas partie de la méthode.",
+    steps:[ "Calculer le coût d'acquisition (base amortissable)", "Calculer le taux : 100 / N", "Calculer l'annuité : V₀ × t",
+            "Additionner les annuités pour obtenir les amortissements cumulés", "Retirer les amortissements cumulés de la valeur d'origine pour obtenir la VCN" ],
+    distract:[ "Multiplier le taux linéaire par 2", "Ajouter la TVA récupérable au prix d'achat" ],
+    hint:"Peux-tu calculer l'annuité sans connaître la base ? Et la VCN sans les amortissements cumulés ?",
+    expl:"On part de la <b>base</b>, on en déduit le <b>taux</b> puis l'<b>annuité</b> ; on <b>cumule</b> les annuités et on obtient la <b>VCN</b>. Doubler le taux, c'est la méthode dégressive ; la TVA récupérable n'entre jamais dans la base." },
+  { type:'fields', ind:'I5', title:"Exercice supplémentaire B",
+    q:"Transports Lambert SRL achète une camionnette le 1er janvier N. Dresse le plan d'amortissement linéaire complet.",
+    data:"Coût d'acquisition : <b>32 000,00 €</b> · Durée : <b>4 ans</b> · Méthode : <b>linéaire</b>",
+    table:{ cols:["Année","Annuité","Amortissements cumulés","VCN"],
+      rows:[ ["1",{a:8000},{a:8000},{a:24000}], ["2",{a:8000},{a:16000},{a:16000}], ["3",{a:8000},{a:24000},{a:8000}], ["4",{a:8000},{a:32000},{a:0}] ] },
+    hint:"Calcule d'abord l'annuité : elle ne change pas. Les cumulés augmentent d'une annuité par an ; la VCN est ce qui reste des 32 000 €.",
+    expl:"Annuité = 32 000 / 4 = <b>8 000,00 €</b>. Cumulés : 8 000 → 16 000 → 24 000 → 32 000. VCN : 24 000 → 16 000 → 8 000 → <b>0,00 €</b>. Contrôle : chaque année, cumulés + VCN = 32 000 €." },
+  { type:'chasse', ind:'I4',
+    q:"Le stagiaire de l'Imprimerie Lemaire SRL a commenté le plan d'amortissement d'une presse. Clique sur les phrases fausses. Attention : une fausse alerte coûte 1 XP.",
+    data:"Presse : <b>20 000,00 €</b> · Durée : <b>5 ans</b> · <b>Linéaire</b> · Mise en service : <b>1er janvier N</b>",
+    docTitle:"Notes du stagiaire – plan de la presse",
+    lines:[ {t:"Le taux d'amortissement est de 100 / 5 = 20 %."},
+            {t:"L'annuité vaut 20 000 × 20 % = 4 000,00 €."},
+            {t:"Fin de l'année 1 : amortissements cumulés 4 000,00 € ; VCN 16 000,00 €."},
+            {t:"Fin de l'année 2 : amortissements cumulés 8 000,00 € ; VCN 14 000,00 €.",err:true,fix:"VCN = 20 000 − 8 000 = 12 000,00 €"},
+            {t:"Année 3 : l'annuité tombe à 3 000,00 €, car la valeur du bien a diminué.",err:true,fix:"En linéaire, l'annuité reste de 4 000,00 € chaque année"},
+            {t:"Fin de l'année 4 : amortissements cumulés 16 000,00 € ; VCN 4 000,00 €."},
+            {t:"Fin de l'année 5 : amortissements cumulés 25 000,00 € ; VCN 0,00 €.",err:true,fix:"Cumulés = 5 × 4 000 = 20 000,00 €"},
+            {t:"Les cinq annuités additionnées redonnent la valeur d'origine de la presse."} ],
+    hint:"Vérifie chaque ligne : en linéaire, l'annuité change-t-elle ? Les cumulés plus la VCN redonnent-ils toujours 20 000 € ?",
+    expl:"Trois erreurs : la VCN fin année 2 vaut <b>12 000 €</b> ; l'annuité reste de <b>4 000 €</b> chaque année en linéaire ; les cumulés fin année 5 valent <b>20 000 €</b>." },
+  { type:'fields', ind:'I4', title:"Exercice supplémentaire C",
+    q:"Le cabinet Martin SRL amortit son mobilier en linéaire depuis le 1er janvier N. Où en est-il à la fin de l'année 4 ?",
+    data:"Valeur d'origine : <b>7 500,00 €</b> · Durée : <b>10 ans</b> · Méthode : <b>linéaire</b>",
+    head:[ {l:"Annuité",a:750,u:'€'}, {l:"Amortissements cumulés fin année 4",a:3000,u:'€'}, {l:"VCN fin année 4",a:4500,u:'€'}, {l:"Fin de quelle année la VCN sera-t-elle nulle ? (n° de l'année)",a:10,u:''} ],
+    traps:[ {k:2,v:6750,m:"Tu n'as retiré qu'une annuité : après 4 ans, quatre annuités ont été actées."} ],
+    hint:"Commence par l'annuité. Combien d'annuités ont été actées après 4 ans ? Et combien d'années faut-il pour amortir tout le bien ?",
+    expl:"Annuité = 7 500 / 10 = <b>750,00 €</b>. Cumulés fin année 4 = 4 × 750 = <b>3 000,00 €</b>. VCN = 7 500 − 3 000 = <b>4 500,00 €</b>. La VCN est nulle à la fin de l'<b>année 10</b>, la dernière année de la durée d'utilisation." },
+  { type:'qcm', ind:'I3', title:"Défi : le calcul à l'envers",
+    q:"Une machine est amortie en linéaire sur 5 ans. Son annuité est de 1 200,00 €. Quelle était sa valeur d'origine ?",
+    options:[ "6 000,00 €","240,00 €","1 200,00 €","12 000,00 €" ], correct:0,
+    hint:"a = V₀ / N : si tu connais a et N, comment retrouves-tu V₀ ?",
+    expl:"V₀ = a × N = 1 200 × 5 = <b>6 000,00 €</b>. Diviser 1 200 par 5 (240 €) confond l'annuité et la valeur d'origine ; 1 200 € n'est que l'annuité d'une seule année." }
+  ]},
+/* ---------------- MISSION 4 ---------------- */
+{ id:'m4', icon:'📉', title:"L'amortissement dégressif", desc:"Double taux, plafond de 40 % et passage au linéaire",
+  theory:`<p>L'amortissement <b>dégressif</b> permet d'amortir davantage durant les <b>premières années</b> de vie du bien (biens neufs admis, durée d'utilisation supérieure à 3 ans).</p>
+  <ul>
+   <li><span class="formula">taux dégressif = taux linéaire × 2</span>, appliqué <b>chaque année</b> à la valeur résiduelle du bien.</li>
+   <li>L'annuité dégressive ne peut jamais dépasser <span class="formula">40 % × valeur d'investissement</span> : le plafond porte sur l'<b>annuité</b>, pas sur le taux.</li>
+   <li>Dès que l'annuité dégressive devient <b>inférieure</b> à l'annuité linéaire, on achève le plan en linéaire.</li>
+  </ul>`,
+  figure:SVG_DEG,
+  example:`Machine de 50 000 € sur 8 ans : taux linéaire 12,5 % → taux dégressif 25 %. Plafond : 40 % × 50 000 = 20 000 €. Année 1 : 25 % × 50 000 = 12 500 € (sous le plafond). Année 2 : 25 % × 37 500 = 9 375 €, toujours plus que l'annuité linéaire de 6 250 €.`,
+  plus:`Le choix de la méthode : une entreprise qui a une bonne activité préfère des charges élevées au début (bénéfice moindre, donc impôt moins élevé) ; une entreprise qui renouvelle très vite ses biens préfère aussi le dégressif.`,
+  questions:[
+  { type:'vf', ind:'I6',
+    q:"Depuis 2020, une SRL peut encore amortir en dégressif une machine neuve qu'elle vient d'acheter.",
+    answer:false,
+    expl:"<b>Faux.</b> Depuis 2020 (réforme de l'impôt des sociétés), les <b>sociétés</b> ne peuvent plus utiliser le dégressif pour leurs nouveaux biens : seuls les <b>indépendants</b> (personnes physiques) gardent ce choix. Une SRL amortit donc cette machine en linéaire." },
+  { type:'fields', ind:'I6', title:"Exercice 1 du cours : l'entreprise A",
+    q:"Un indépendant acquiert un bien neuf le 1er janvier, amorti en dégressif. Calcule le taux dégressif et le plafond, puis complète le tableau.",
+    data:"Valeur d'investissement : <b>100 000,00 €</b> · Durée : <b>5 ans</b> · Annuité linéaire : <b>20 000,00 €</b>",
+    head:[ {l:"Taux dégressif",a:40,u:'%'}, {l:"Plafond (montant maximum accepté)",a:40000,u:'€'} ],
+    table:{ cols:["Année","Dotation annuelle","Amortissements cumulés","VCN"],
+      rows:[ ["1",{a:40000},{a:40000},{a:60000}], ["2",{a:24000},{a:64000},{a:36000}], ["3",{a:20000},{a:84000},{a:16000}], ["4",{a:16000},{a:100000},{a:0}], ["5","—","—","—"] ] },
+    traps:[ {k:0,v:20,m:"20 %, c'est le taux linéaire : le dégressif en est le double."} ],
+    hint:"Le taux dégressif s'applique chaque année à la VCN de l'année précédente. Compare à chaque fois l'annuité obtenue à l'annuité linéaire (20 000 €) : si elle est plus petite, que fais-tu ?",
+    expl:"Taux = 20 % × 2 = <b>40 %</b> ; plafond = 40 % × 100 000 = <b>40 000 €</b>. Année 1 : 40 % × 100 000 = 40 000 (égal au plafond, accepté). Année 2 : 40 % × 60 000 = 24 000. Année 3 : 40 % × 36 000 = 14 400 &lt; 20 000 → passage au linéaire : <b>20 000</b>. Année 4 : solde de <b>16 000</b> → VCN 0." },
+  { type:'multi', ind:'I6',
+    q:"Un indépendant achète des biens neufs, utilisables plus de 3 ans. Lesquels peut-il amortir en dégressif ? Coche toutes les bonnes réponses.",
+    options:[ {t:"une machine industrielle",ok:true},{t:"du matériel de bureau",ok:true},{t:"un immeuble industriel",ok:true},{t:"un taxi",ok:true},
+              {t:"une voiture automobile",ok:false},{t:"un brevet (immobilisation incorporelle)",ok:false},{t:"une machine mise en location chez un tiers",ok:false} ],
+    hint:"Relis la liste des biens exclus : les immobilisations incorporelles, les biens dont l'usage est cédé à un tiers, les véhicules automobiles… avec une exception.",
+    expl:"Admis : le matériel industriel, le matériel de bureau, les immeubles industriels et le matériel roulant (le <b>taxi</b> est une exception à l'exclusion des véhicules automobiles). Exclus : la voiture automobile, le brevet (incorporel) et le bien mis en location chez un tiers." },
+  { type:'fields', ind:'I6', title:"Exercice 2 du cours : attention au plafond",
+    q:"Un indépendant amortit en dégressif un bien neuf mis en service le 1er janvier. Calcule le taux et le plafond, puis complète le tableau.",
+    data:"Valeur d'investissement : <b>100 000,00 €</b> · Durée : <b>4 ans</b> · Annuité linéaire : <b>25 000,00 €</b>",
+    head:[ {l:"Taux dégressif",a:50,u:'%'}, {l:"Plafond (montant maximum accepté)",a:40000,u:'€'} ],
+    table:{ cols:["Année","Dotation annuelle","Amortissements cumulés","VCN"],
+      rows:[ ["1",{a:40000},{a:40000},{a:60000}], ["2",{a:30000},{a:70000},{a:30000}], ["3",{a:25000},{a:95000},{a:5000}], ["4",{a:5000},{a:100000},{a:0}] ] },
+    traps:[ {k:2,v:50000,m:"50 % × 100 000 = 50 000 € dépasse le plafond : l'annuité de l'année 1 est limitée."} ],
+    hint:"50 % de 100 000 dépasse-t-il le plafond ? Ensuite, compare chaque annuité dégressive à l'annuité linéaire (25 000 €).",
+    expl:"Taux = 25 % × 2 = <b>50 %</b> ; 50 % × 100 000 = 50 000 € &gt; plafond de <b>40 000 €</b> → année 1 : 40 000. Année 2 : 50 % × 60 000 = 30 000. Année 3 : 50 % × 30 000 = 15 000 &lt; 25 000 → linéaire : <b>25 000</b>. Année 4 : solde de <b>5 000</b>." },
+  { type:'fields', ind:'I6', title:"Exercice 3 du cours : TOUTESTBON, fiche 2",
+    q:"Le traiteur TOUTESTBON, un indépendant, amortit l'équipement de sa camionnette en dégressif. Calcule le taux pratiqué et les annuités.",
+    data:"Coût d'achat : <b>120 000,00 €</b> · Mise en service : <b>01-01-N</b> · Durée prévue : <b>5 ans</b> · Annuité linéaire : <b>24 000,00 €</b>",
+    head:[ {l:"Taux pratiqué (dégressif)",a:40,u:'%'}, {l:"Annuité année 1",a:48000,u:'€'}, {l:"Annuité année 2",a:28800,u:'€'}, {l:"Annuité année 3",a:24000,u:'€'}, {l:"Annuité année 4",a:19200,u:'€'} ],
+    traps:[ {k:3,v:17280,m:"40 % × 43 200 = 17 280 € est plus petit que l'annuité linéaire : que dit la règle ?"} ],
+    hint:"Le plafond (40 % de 120 000) est-il dépassé l'année 1 ? À partir de quelle année l'annuité dégressive devient-elle inférieure à l'annuité linéaire ?",
+    expl:"Taux = 20 % × 2 = <b>40 %</b>. Année 1 : 40 % × 120 000 = <b>48 000</b> (égal au plafond). Année 2 : 40 % × 72 000 = <b>28 800</b>. Année 3 : 40 % × 43 200 = 17 280 &lt; 24 000 → linéaire : <b>24 000</b>. Année 4 : solde de <b>19 200</b>." },
+  { type:'qcm', ind:'I6', title:"Exercice 3 du cours : TOUTESTBON, fiche 4",
+    q:"Chambre froide de TOUTESTBON amortie en dégressif (coût 240 000,00 €, 10 ans, taux 20 %). Au début de l'année 6, la valeur résiduelle est de 98 304,00 €. Quelle annuité inscris-tu pour l'année 6 ?",
+    options:[ "24 000,00 €","19 660,80 €","39 321,60 €","9 830,40 €" ], correct:0,
+    hint:"Calcule 20 % de 98 304 € et compare le résultat à l'annuité linéaire de la chambre froide (240 000 / 10).",
+    expl:"20 % × 98 304 = 19 660,80 €, ce qui est <b>inférieur</b> à l'annuité linéaire de 24 000 € (240 000 / 10). On achève donc le plan en linéaire : <b>24 000,00 €</b>. 39 321,60 € appliquerait un taux de 40 %, et 9 830,40 € le taux linéaire de 10 % sur la valeur résiduelle." },
+  { type:'trous', ind:'I5', title:"Synthèse : retour sur le linéaire",
+    q:"Complète la synthèse en plaçant les mots de la banque. Trois mots ne servent à rien.",
+    text:"En linéaire, l'annuité est {0} ; on la calcule par a = V₀ / {1}. Les amortissements {2} additionnent les annuités déjà actées, et la {3} est la valeur qui reste à amortir. La base amortissable comprend le prix {4} et les frais {5}, mais pas la TVA {6}. Depuis 2020, les {7} amortissent leurs nouveaux biens en linéaire.",
+    answers:["constante","N","cumulés","VCN","HTVA","accessoires","récupérable","sociétés"],
+    distract:["variable","non récupérable","indépendants"],
+    hint:"Relis chaque phrase : de quelle colonne du plan parle-t-on ? Qui garde encore le choix du dégressif depuis 2020 ?",
+    expl:"En linéaire, l'annuité est <b>constante</b> ; a = V₀ / <b>N</b>. Les amortissements <b>cumulés</b> additionnent les annuités, la <b>VCN</b> est ce qui reste à amortir. Base = prix <b>HTVA</b> + frais <b>accessoires</b>, sans la TVA <b>récupérable</b>. Depuis 2020, les <b>sociétés</b> amortissent en linéaire (seuls les indépendants gardent le choix du dégressif)." }
+  ]}
+];
+
+/* ----- Préparation : entrées numériques, points dérivés, rotation des QCM ----- */
+const ELEMENT_PTS = 2;
+LEVELS.forEach(lv => lv.questions.forEach(Q => {
+  if (Q.type === 'fields') {
+    Q.inputs = [];
+    (Q.head||[]).forEach(f => Q.inputs.push({a:f.a, u:f.u===undefined?'€':f.u, tol:f.tol, l:f.l}));
+    if (Q.table) Q.table.rows.forEach(r => r.forEach((c,j) => { if (typeof c === 'object') { c.k = Q.inputs.length; Q.inputs.push({a:c.a, u:'num€', tol:c.tol, l:Q.table.cols[j]+' année '+r[0]}); } }));
+    Q.n = Q.inputs.length; Q.pts = Q.n * ELEMENT_PTS;
+  }
+  else if (Q.type === 'classement') { Q.n = Q.items.length; Q.pts = Q.n * ELEMENT_PTS; }
+  else if (Q.type === 'appariement') { Q.n = Q.pairs.length; Q.pts = Q.n * ELEMENT_PTS; }
+  else if (Q.type === 'ordre') { Q.n = Q.steps.length; Q.pts = Q.n * ELEMENT_PTS; }
+  else if (Q.type === 'trous') { Q.n = Q.answers.length; Q.pts = Q.n * ELEMENT_PTS; }
+  else if (Q.type === 'chasse') { Q.n = Q.lines.filter(l => l.err).length; Q.pts = Q.n * 3; }
+  else if (Q.type === 'qcm') Q.pts = 6;
+  else if (Q.type === 'multi') Q.pts = 6;
+  else if (Q.type === 'vf') Q.pts = 4;
+}));
+/* fmtAns pour les cellules de tableau : montant sans symbole */
+const _fmtAns = fmtAns;
+fmtAns = function(inp){ if (inp.u === 'num€') return fmtE(inp.a); return _fmtAns(inp); };
+
+const DECALAGE = [2,0,3,1, 1,3,0,2, 3,1,2,0, 0,2,1,3, 2,3,0,1];
+(function melangerPropositions(liste){
+  let k = 0;
+  liste.forEach(q => {
+    if (q.type !== 'qcm') return;
+    const t = DECALAGE[k++ % DECALAGE.length];
+    for (let n = 0; n < t; n++) { q.options.unshift(q.options.pop()); q.correct = (q.correct + 1) % q.options.length; }
+  });
+})(LEVELS.flatMap(lv => lv.questions));
+
+LEVELS.forEach(lv => { lv.maxPoints = lv.questions.reduce((s,q) => s + q.pts, 0); });
+const TOTAL_XP = LEVELS.reduce((s,lv) => s + lv.maxPoints, 0);
+const TOTAL_Q  = LEVELS.reduce((s,lv) => s + lv.questions.length, 0);
+const DUREE = { qcm:40, vf:20, multi:60, fields:90, classement:90, appariement:60, ordre:60, trous:90, chasse:120 };
+function dureeQ(Q){ if (Q.type==='fields' && Q.table) return 60 + Q.n*10; return DUREE[Q.type]; }
+const DUREE_MIN = Math.round((LEVELS.reduce((s,lv) => s + 60 + lv.questions.reduce((t,Q) => t + dureeQ(Q), 0), 0)) / 60);
+
+const RANKS = [ {p:0,ic:'🎒',n:'Stagiaire'}, {p:.20,ic:'🧑‍💼',n:'Employé'}, {p:.45,ic:'🧮',n:'Chef comptable'}, {p:.65,ic:'📈',n:'Directeur financier'}, {p:.85,ic:'👑',n:'CEO'} ];
+const TYPE_LABEL = { qcm:'QCM', vf:'Vrai / Faux', multi:'Sélection multiple', classement:'Classement', appariement:'Appariement', ordre:'Remise en ordre', trous:'Texte à trous', chasse:'Chasse aux erreurs' };
+const PRED = { moitie:{t:'Environ la moitié 😅',v:.5}, troisquarts:{t:'Les trois quarts 💪',v:.75}, toutes:{t:'Toutes ! 🏆',v:1} };
+
+const BADGES = [
+  { id:'m1', ic:'🧱', n:'Fondations', c:'Terminer la mission 1' },
+  { id:'fin', ic:'🏁', n:'Plan bouclé', c:'Terminer les 4 missions' },
+  { id:'parfait', ic:'💯', n:'Sans faute', c:'100 % du premier coup sur une mission' },
+  { id:'serie5', ic:'🔥', n:'En feu', c:'5 bonnes réponses d\'affilée' },
+  { id:'lineaire', ic:'📏', n:'As du linéaire', c:'Plan complet de l\'exercice B juste du premier coup' },
+  { id:'lynx', ic:'🕵️', n:'Œil de lynx', c:'Les 3 erreurs du stagiaire trouvées au 1er essai, sans fausse alerte' },
+  { id:'estim', ic:'🎯', n:'Bonne estimation', c:'Prédire correctement son score d\'une mission' },
+  { id:'expert', ic:'🏆', n:'Expert comptable', c:'85 % du premier coup sur l\'ensemble' }
+];
+
+/* =====================================================================
+   4. ÉTAT
+   ===================================================================== */
+const APP = {
+  screen:'welcome', level:0, q:0, qs:{}, score:0, streak:0, bestStreak:0,
+  completed:new Set(), pred:{}, badges:new Set(), rankIdx:0, sound:false, finalCelebrated:false, fxPending:null,
+  email: lsGet('student_email') || '', classe: lsGet('student_classe') || '',
+  exerciseStartTime:null, exerciseTimes:{}, exerciseScores:{}, scoreBeforeExercise:0, globalTimerStart:null, globalTimerInterval:null, timerLevel:null
+};
+const getQ = (l,i) => LEVELS[l].questions[i];
+function S(l,i){ const k = l+'_'+i; if (!APP.qs[k]) APP.qs[k] = { att:0, done:false, status:null, earned:0, fb:'', fbc:'', vals:{}, lock:{}, place:{}, sel:null, wrong:[], chosen:[], fa:{}, penalty:0 }; return APP.qs[k]; }
+const isUnlocked = l => l === 0 || APP.completed.has(l-1);
+
+/* =====================================================================
+   5. MACHINE À ÉTATS ET RENDU
+   ===================================================================== */
+function setScreen(name){ APP.screen = name; renderScreen(); window.scrollTo({top:0,behavior:'smooth'}); }
+function renderScreen(){
+  const m = document.getElementById('main');
+  switch (APP.screen) {
+    case 'welcome':  m.innerHTML = renderWelcome(); break;
+    case 'hub':      m.innerHTML = renderHub(); break;
+    case 'brief':    m.innerHTML = renderBrief(APP.level); break;
+    case 'question': m.innerHTML = renderQuestion(APP.level, APP.q); break;
+    case 'bilan':    m.innerHTML = renderBilan(APP.level); break;
+  }
+  if (APP.fxPending === 'shake') { const c = document.getElementById('qcard'); if (c) { c.classList.add('shake'); } }
+  APP.fxPending = null;
+  if (APP.screen === 'hub') simUpdate();
+  updateHUD(); renderNav();
+}
+function goHub(){ setScreen('hub'); }
+function goLevel(l){
+  if (!isUnlocked(l)) return;
+  APP.level = l;
+  if (APP.completed.has(l)) { setScreen('bilan'); return; }
+  if (APP.timerLevel !== l) { startExerciseTimer(l); APP.timerLevel = l; }
+  setScreen('brief');
+}
+function startLevel(){
+  const l = APP.level, n = LEVELS[l].questions.length;
+  let q = 0; while (q < n-1 && S(l,q).done) q++;
+  APP.q = q; setScreen('question');
+}
+
+function renderNav(){
+  document.getElementById('pills').innerHTML = LEVELS.map((lv,l) => {
+    const locked = !isUnlocked(l), done = APP.completed.has(l);
+    const cur = (APP.screen==='brief'||APP.screen==='question'||APP.screen==='bilan') && APP.level===l;
+    return `<button class="pill ${done?'done':''} ${locked?'locked':''} ${cur?'cur':''}" ${locked?'disabled':''} onclick="goLevel(${l})">${done?'✓':locked?'🔒':l+1} ${lv.icon} Mission ${l+1}</button>`;
+  }).join('');
+}
+function rankOf(score){ let r = 0; RANKS.forEach((k,i) => { if (score >= Math.ceil(k.p*TOTAL_XP)) r = i; }); return r; }
+function updateHUD(){
+  document.getElementById('hudXP').textContent = '⭐ ' + fmtXP(APP.score) + ' XP';
+  const s = document.getElementById('hudStreak'); s.textContent = '🔥 ' + APP.streak; s.classList.toggle('hot', APP.streak >= 3);
+  const r = rankOf(APP.score), R = RANKS[r];
+  document.getElementById('hudRank').textContent = R.ic + ' ' + R.n;
+  document.getElementById('xpfill').style.width = Math.min(100, APP.score / TOTAL_XP * 100) + '%';
+  const bar = document.getElementById('xpbar');
+  bar.querySelectorAll('.xpmark').forEach(e => e.remove());
+  RANKS.slice(1).forEach(k => { const d = document.createElement('div'); d.className = 'xpmark'; d.style.left = (k.p*100)+'%'; d.innerHTML = '<span>'+k.ic+'</span>'; d.title = k.n; bar.appendChild(d); });
+  const nx = RANKS[r+1];
+  document.getElementById('xpnext').textContent = nx ? 'prochain rang à ' + Math.ceil(nx.p*TOTAL_XP) + ' XP' : 'rang maximal atteint !';
+}
+
+/* ----- Accueil ----- */
+function renderWelcome(){
+  return `<section class="hero">
+    <span class="big">📉</span>
+    <h1>Les <span class="grad">amortissements</span></h1>
+    <p class="lead">Une camionnette ne s'achète qu'une fois, mais elle s'use chaque année. Entraîne-toi à répartir son coût : base amortissable, taux, annuité, amortissements cumulés, VCN… puis le dégressif.</p>
+    ${APP.email ? `<div class="who">👤 ${esc(APP.email)} ${APP.classe?'· '+esc(APP.classe):''}</div>` : ''}
+  </section>
+  <div class="stats">
+    <div class="stat"><b>${LEVELS.length}</b><span>missions</span></div>
+    <div class="stat"><b>${TOTAL_Q}</b><span>questions</span></div>
+    <div class="stat"><b>${TOTAL_XP}</b><span>XP</span></div>
+    <div class="stat"><b>${BADGES.length}</b><span>badges</span></div>
+    <div class="stat"><b>⏱️ ${DUREE_MIN}</b><span>min environ</span></div>
+  </div>
+  <div class="card center">
+    <h3>🎯 Ton défi</h3>
+    <p class="muted" style="margin:6px 0 16px">4 missions, de la base au dégressif. Deux essais par question : un indice après le premier, la réponse expliquée après le second. Tu n'es jamais bloqué.</p>
+    <button class="btn" onclick="goHub()">Commencer ➜</button>
+    <div class="lbbtns">
+      <button class="lbbtn app" onclick="openLB('app')">🏆 Classement</button>
+      <button class="lbbtn glob" onclick="openLB('global')">🌍 Général</button>
+    </div>
+  </div>`;
+}
+
+/* ----- Parcours ----- */
+function levelStats(l){
+  const lv = LEVELS[l]; let c=0,h=0,s=0,pts=0;
+  lv.questions.forEach((q,i) => { const st = S(l,i); pts += st.earned; if (st.status==='correct') c++; else if (st.status==='hint') h++; else if (st.status==='shown') s++; });
+  const n = lv.questions.length, first = c/n;
+  return { c, h, s, n, pts, first };
+}
+const starsOf = r => r>=.85?'★★★':r>=.65?'★★☆':r>=.45?'★☆☆':'☆☆☆';
+const gradeOf = r => r>=.85?['A','Excellent'] : r>=.65?['B','Très bien'] : r>=.45?['C','Satisfaisant'] : ['D','À retravailler'];
+const medalOf = r => r>=.9?'🏆':r>=.7?'🥇':r>=.5?'🥈':'🥉';
+
+function renderHub(){
+  const allDone = APP.completed.size === LEVELS.length;
+  let h = allDone ? renderFinal() : `<div class="center"><h2>🗺️ Ton parcours</h2><p class="muted">Les missions se débloquent l'une après l'autre.</p></div>`;
+  h += '<div class="path">';
+  LEVELS.forEach((lv,l) => {
+    const locked = !isUnlocked(l), done = APP.completed.has(l);
+    const st = levelStats(l);
+    const meta = done ? `<span class="stars">${starsOf(st.first)}</span><span>${fmtXP(st.pts)} / ${lv.maxPoints} XP</span>`
+                      : `<span>${lv.questions.length} questions</span><span>${lv.maxPoints} XP à gagner</span>`;
+    h += `<div class="step ${l%2?'right':''}">
+      <div class="node ${done?'done':locked?'locked':'todo'}">${done?'✓':locked?'🔒':l+1}</div>
+      <div class="card lvcard ${locked?'locked':''}" onclick="goLevel(${l})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')goLevel(${l})">
+        <div class="row"><span class="ic">${lv.icon}</span><div><div class="qtag">Mission ${l+1}</div><h3>${lv.title}</h3></div></div>
+        <p class="muted" style="font-size:.9rem;margin-top:4px">${lv.desc}</p>
+        <div class="lvmeta">${meta}</div>
+      </div></div>`;
+  });
+  h += '</div>';
+  h += `<div class="card" style="margin-top:20px"><h3>🏆 Vitrine des trophées <span class="muted" style="font-weight:400;font-size:.9rem">(${APP.badges.size}/${BADGES.length})</span></h3><div class="trophies">` +
+    BADGES.map(b => `<div class="trophy ${APP.badges.has(b.id)?'':'off'}"><div class="ti">${b.ic}</div><b>${b.n}</b><small>${b.c}</small></div>`).join('') + '</div></div>';
+  return h;
+}
+
+/* ----- Briefing ----- */
+function renderBrief(l){
+  const lv = LEVELS[l];
+  const inds = [...new Set(lv.questions.map(q => q.ind))];
+  return `<div class="card">
+    <div class="brief-head"><span class="ic">${lv.icon}</span><div>
+      <div class="qtag">Mission ${l+1} · ${lv.questions.length} questions · ${lv.maxPoints} XP en jeu</div>
+      <h2>${lv.title}</h2><div class="tagline">${lv.desc}</div></div></div>
+    <div class="objectives"><b>🎯 À la fin de cette mission, tu sauras…</b><ul>${inds.map(id => '<li>'+IND[id].brief+'</li>').join('')}</ul></div>
+    <div class="theory"><h3>📘 Rappel</h3>${lv.theory}</div>
+    ${lv.figure ? `<div class="figure">${lv.figure}</div>` : ''}
+    <div class="box ex"><div class="bt">Exemple</div>${lv.example}</div>
+    ${lv.plus ? `<div class="box plus"><div class="bt">✨ Pour aller plus loin (non évalué)</div>${lv.plus}</div>` : ''}
+    <h3 style="margin-top:18px">🔮 Combien de questions penses-tu réussir du premier coup ?</h3>
+    <div class="predict">${Object.keys(PRED).map(k => `<button class="${APP.pred[l]===k?'sel':''}" onclick="setPred('${k}')">${PRED[k].t}</button>`).join('')}</div>
+    <div class="actions"><button class="btn ghost" onclick="goHub()">← Parcours</button>
+      <button class="btn" onclick="startLevel()" ${APP.pred[l]?'':'disabled'} title="${APP.pred[l]?'':'Fais d\'abord ta prédiction'}">C'est parti ➜</button></div>
+  </div>`;
+}
+function setPred(k){ APP.pred[APP.level] = k; renderScreen(); }
+
+/* ----- Question ----- */
+function renderQuestion(l,i){
+  const lv = LEVELS[l], Q = getQ(l,i), st = S(l,i);
+  const dots = lv.questions.map((q,j) => { const s = S(l,j); return `<span class="qdot ${j===i?'cur':(s.status||'')}"></span>`; }).join('');
+  const label = Q.type==='fields' ? (Q.table ? 'Tableau à compléter' : 'Réponse à écrire') : TYPE_LABEL[Q.type];
+  const tries = Q.type==='vf' ? '1 essai' : '2 essais';
+  let body = '';
+  switch (Q.type) {
+    case 'qcm': body = rQCM(Q,st); break;
+    case 'vf': body = rVF(Q,st); break;
+    case 'multi': body = rMulti(Q,st,l,i); break;
+    case 'fields': body = rFields(Q,st); break;
+    case 'classement': body = rClassement(Q,st,l,i); break;
+    case 'appariement': body = rApp(Q,st,l,i); break;
+    case 'ordre': body = rOrdre(Q,st,l,i); break;
+    case 'trous': body = rTrous(Q,st,l,i); break;
+    case 'chasse': body = rChasse(Q,st); break;
+  }
+  const needVerify = !st.done && ['multi','fields','classement','appariement','ordre','trous','chasse'].includes(Q.type);
+  const last = i === lv.questions.length-1;
+  return `<div class="qdots">${dots}</div>
+  <div class="card" id="qcard">
+    <div class="qtag qhead"><span>${label} — ${tries} · ${Q.pts} XP</span><span>Mission ${l+1} · ${i+1}/${lv.questions.length}</span></div>
+    ${Q.title ? `<div class="qtitle">${Q.title}</div>` : ''}
+    <p class="qtext">${Q.q}</p>
+    ${Q.data ? `<span class="data">${Q.data}</span>` : ''}
+    ${body}
+    <div class="fb ${st.fbc}" aria-live="polite">${st.fb}</div>
+    <div class="actions">
+      <button class="btn ghost sm" onclick="goHub()">🗺️ Parcours</button>
+      ${needVerify ? `<button class="btn" onclick="verify()">Vérifier ✔</button>` : ''}
+      ${st.done ? `<button class="btn" onclick="nextQuestion()">${last ? 'Voir le bilan de la mission ➜' : 'Question suivante ➜'}</button>` : ''}
+    </div>
+  </div>`;
+}
+
+/* QCM */
+function rQCM(Q,st){
+  return '<div class="opts">' + Q.options.map((o,j) => {
+    let c = '';
+    if (st.wrong.includes(j)) c = 'wrong';
+    if (st.done && j === Q.correct) c = 'right';
+    return `<button class="opt ${c}" ${st.done||st.wrong.includes(j)?'disabled':''} onclick="answerQCM(${j})">${o}</button>`;
+  }).join('') + '</div>';
+}
+function answerQCM(j){
+  const l = APP.level, i = APP.q, Q = getQ(l,i), st = S(l,i);
+  if (st.done || st.wrong.includes(j)) return;
+  if (j === Q.correct) {
+    finishSimple(l,i, st.att===0 ? 'correct':'hint', st.att===0 ? Q.pts : Q.pts/2);
+    st.fb = (st.att===0?'✅ Exact ! ':'✅ Corrigé au 2e essai. ') + Q.expl; st.fbc = st.att===0?'good':'mid';
+  } else {
+    st.wrong.push(j); st.att++;
+    if (st.att === 1) { st.fb = '🤔 Pas tout à fait. 💡 ' + Q.hint; st.fbc = 'info'; wrongFx(); }
+    else { finishSimple(l,i,'shown',0); st.fb = '👁 La bonne réponse est en vert. ' + Q.expl; st.fbc = 'bad'; wrongFx(); }
+  }
+  renderScreen();
+}
+/* Vrai / Faux */
+function rVF(Q,st){
+  return '<div class="vf">' + [true,false].map(v => {
+    let c = '';
+    if (st.done) { if (v === Q.answer) c = 'right'; else if (st.sel === v) c = 'wrong'; }
+    return `<button class="opt ${c}" ${st.done?'disabled':''} onclick="answerVF(${v})">${v?'✔ Vrai':'✘ Faux'}</button>`;
+  }).join('') + '</div>';
+}
+function answerVF(v){
+  const l = APP.level, i = APP.q, Q = getQ(l,i), st = S(l,i);
+  if (st.done) return; st.sel = v;
+  if (v === Q.answer) { finishSimple(l,i,'correct',Q.pts); st.fb = '✅ ' + Q.expl; st.fbc = 'good'; }
+  else { finishSimple(l,i,'shown',0); st.fb = '❌ ' + Q.expl; st.fbc = 'bad'; wrongFx(); }
+  renderScreen();
+}
+/* Sélection multiple */
+function rMulti(Q,st,l,i){
+  if (!st.order) st.order = shuffled(Q.options.length, l*31 + i*7 + 11);
+  return '<div class="opts">' + st.order.map(j => {
+    const o = Q.options[j], on = st.chosen.includes(j);
+    let c = on ? 'sel' : '';
+    if (st.done) { if (o.ok && on) c = 'right'; else if (o.ok && !on) c = 'missed'; else if (!o.ok && on) c = 'wrong'; }
+    return `<button class="opt ${c}" ${st.done?'disabled':''} onclick="toggleMulti(${j})"><span class="box2"></span>${o.t}</button>`;
+  }).join('') + '</div>';
+}
+function toggleMulti(j){ const st = S(APP.level,APP.q); if (st.done) return; const k = st.chosen.indexOf(j); if (k>=0) st.chosen.splice(k,1); else st.chosen.push(j); renderScreen(); }
+function verifyMulti(l,i,Q,st){
+  if (!st.chosen.length) { st.fb = '☝️ Coche au moins une proposition.'; st.fbc='info'; return; }
+  const ok = Q.options.every((o,j) => o.ok === st.chosen.includes(j));
+  if (ok) { finishSimple(l,i, st.att===0?'correct':'hint', st.att===0?Q.pts:Q.pts/2); st.fb = (st.att===0?'✅ Parfait ! ':'✅ Corrigé au 2e essai. ') + Q.expl; st.fbc = st.att===0?'good':'mid'; }
+  else {
+    st.att++;
+    if (st.att === 1) { st.fb = '🤔 Ta sélection n\'est pas encore exacte (il peut manquer des biens ou en avoir de trop). 💡 ' + Q.hint; st.fbc='info'; wrongFx(); }
+    else { finishSimple(l,i,'shown',0); st.fb = '👁 Correction : en vert les bons choix, en pointillés ceux qui manquaient, en rouge les intrus. ' + Q.expl; st.fbc='bad'; wrongFx(); }
+  }
+}
+
+/* Champs numériques et tableaux */
+function inputHTML(Q,st,k){
+  const inp = Q.inputs[k], lk = st.lock[k], v = st.vals[k] !== undefined ? st.vals[k] : '';
+  if (lk) return `<span class="lk ${lk}">${lk==='ko' ? `<s>${esc(v)||'—'}</s> → <b>${fmtAns(inp)}</b>` : fmtAns(inp)}</span>`;
+  const unit = (inp.u==='€'||inp.u==='%') ? `<em>${inp.u}</em>` : '';
+  return `<span class="inwrap"><input data-k="${k}" value="${esc(v)}" inputmode="decimal" autocomplete="off" aria-label="${esc(inp.l)}" oninput="onFieldInput(this)" onkeydown="if(event.key==='Enter')verify()">${unit}</span>`;
+}
+function rFields(Q,st){
+  let h = '';
+  if (Q.head && Q.head.length) h += '<div class="fgrid">' + Q.head.map((f,k) => `<label class="fld"><span>${f.l}</span>${inputHTML(Q,st,k)}</label>`).join('') + '</div>';
+  if (Q.table) {
+    h += '<div class="tablewrap"><table class="amt"><tr>' + Q.table.cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
+    Q.table.rows.forEach(r => { h += '<tr>' + r.map((c,j) => j===0 ? `<td class="yr">${c}</td>` : (typeof c === 'object' ? `<td>${inputHTML(Q,st,c.k)}</td>` : `<td class="given">${c}</td>`)).join('') + '</tr>'; });
+    h += '</table></div><div class="muted" style="font-size:.8rem">Montants en euros. Tu peux taper 25000, 25 000 ou 25000,00.</div>';
+  }
+  h += '<div class="calcprev" id="calcprev"></div>';
+  return h;
+}
+function onFieldInput(el){
+  const st = S(APP.level,APP.q); st.vals[el.dataset.k] = el.value;
+  const r = evalExpr(el.value), p = document.getElementById('calcprev');
+  if (p) p.textContent = r !== null ? '🧮 ' + el.value.replace(/\*/g,'×').replace(/\//g,'÷') + '  →  = ' + fmtN(Math.round(r*100)/100) : '';
+}
+function okNum(inp, v){ const x = parseNum(v); return !isNaN(x) && Math.abs(x - inp.a) <= (inp.tol !== undefined ? inp.tol : 0.02); }
+function verifyFields(l,i,Q,st){
+  const open = Q.inputs.map((_,k) => k).filter(k => !st.lock[k]);
+  if (open.some(k => st.vals[k] === undefined || String(st.vals[k]).trim() === '')) { st.fb = '☝️ Complète toutes les cases avant de vérifier.'; st.fbc='info'; return; }
+  const trapMsgs = [];
+  open.forEach(k => {
+    const good = okNum(Q.inputs[k], st.vals[k]);
+    if (st.att === 0) { if (good) st.lock[k] = 'ok'; }
+    else st.lock[k] = good ? 'ok2' : 'ko';
+    if (!good && Q.traps) Q.traps.forEach(t => { if (t.k === k && Math.abs(parseNum(st.vals[k]) - t.v) < 0.5) trapMsgs.push(t.m); });
+  });
+  itemsAfterCheck(l,i,Q,st, Q.inputs.length, trapMsgs, 'cases justes (verrouillées en vert). Corrige les autres.');
+}
+
+/* Classement par zones (clic-clic) */
+function rClassement(Q,st,l,i){
+  if (!st.order) st.order = shuffled(Q.items.length, l*31 + i*7 + 11);
+  const tag = j => { const lk = st.lock[j];
+    if (lk) return `<span class="tag ${lk}">${Q.items[j].t}${lk==='ko'?`<span class="fix">→ ${Q.zones[Q.items[j].z]}</span>`:''}</span>`;
+    return `<button class="tag ${st.sel===j?'sel':''}" onclick="event.stopPropagation();pickItem(${j})">${Q.items[j].t}</button>`; };
+  const inPool = st.order.filter(j => st.place[j] === undefined && !st.lock[j]);
+  let h = `<div class="pool"><span class="lbl">Étiquettes — clique une étiquette, puis la zone</span>${inPool.map(tag).join('') || '<span class="muted">Toutes les étiquettes sont placées.</span>'}</div><div class="zones">`;
+  Q.zones.forEach((z,zi) => {
+    const here = st.order.filter(j => (st.place[j] === zi && !st.lock[j]) || (st.lock[j] && (st.lock[j]==='ko' ? st.place[j]===zi : Q.items[j].z===zi)));
+    h += `<div class="zone" onclick="dropZone(${zi})"><h4>${z}</h4>${here.map(tag).join('')}</div>`;
+  });
+  return h + '</div>';
+}
+function pickItem(j){
+  const st = S(APP.level,APP.q); if (st.done || st.lock[j]) return;
+  if (st.place[j] !== undefined && st.sel !== j) { delete st.place[j]; st.sel = null; }
+  else st.sel = st.sel === j ? null : j;
+  renderScreen();
+}
+function dropZone(zi){ const st = S(APP.level,APP.q); if (st.done || st.sel === null) return; st.place[st.sel] = zi; st.sel = null; renderScreen(); }
+function verifyClassement(l,i,Q,st){
+  const open = Q.items.map((_,j) => j).filter(j => !st.lock[j]);
+  if (open.some(j => st.place[j] === undefined)) { st.fb = '☝️ Place toutes les étiquettes avant de vérifier.'; st.fbc='info'; return; }
+  open.forEach(j => { const good = st.place[j] === Q.items[j].z;
+    if (st.att === 0) { if (good) st.lock[j] = 'ok'; else delete st.place[j]; }
+    else st.lock[j] = good ? 'ok2' : 'ko'; });
+  itemsAfterCheck(l,i,Q,st, Q.items.length, [], 'étiquettes bien placées (verrouillées). Les autres sont revenues dans la réserve.');
+}
+
+/* Appariement (listes déroulantes) */
+function rApp(Q,st,l,i){
+  if (!st.order) { const all = Q.pairs.map(p => p[1]).concat(Q.extras); st.opts = shuffled(all.length, l*31 + i*7 + 5).map(k => all[k]); st.order = shuffled(Q.pairs.length, l*31 + i*7 + 11); }
+  return '<div class="match">' + st.order.map(j => {
+    const lk = st.lock[j], v = st.place[j] || '';
+    const right = lk ? `<span class="lk ${lk}" style="text-align:left">${lk==='ko' ? `<s>${esc(v)}</s> → <b>${Q.pairs[j][1]}</b>` : Q.pairs[j][1]}</span>`
+      : `<select onchange="setMatch(${j},this.value)" aria-label="${esc(Q.pairs[j][0])}"><option value="">— choisir —</option>${st.opts.map(o => `<option ${o===v?'selected':''}>${o}</option>`).join('')}</select>`;
+    return `<div class="mrow"><span>${Q.pairs[j][0]}</span>${right}</div>`;
+  }).join('') + '</div>';
+}
+function setMatch(j,v){ const st = S(APP.level,APP.q); if (v) st.place[j] = v; else delete st.place[j]; }
+function verifyApp(l,i,Q,st){
+  const open = Q.pairs.map((_,j) => j).filter(j => !st.lock[j]);
+  if (open.some(j => !st.place[j])) { st.fb = '☝️ Choisis une réponse sur chaque ligne avant de vérifier.'; st.fbc='info'; return; }
+  open.forEach(j => { const good = st.place[j] === Q.pairs[j][1];
+    if (st.att === 0) { if (good) st.lock[j] = 'ok'; else delete st.place[j]; }
+    else st.lock[j] = good ? 'ok2' : 'ko'; });
+  itemsAfterCheck(l,i,Q,st, Q.pairs.length, [], 'associations justes (verrouillées). Recommence les autres.');
+}
+
+/* Remise en ordre */
+function rOrdre(Q,st,l,i){
+  const all = Q.steps.concat(Q.distract);
+  if (!st.order) st.order = shuffled(all.length, l*31 + i*7 + 11);
+  const used = Object.values(st.place);
+  const pool = st.order.filter(j => !used.includes(j));
+  let h = `<div class="pool"><span class="lbl">Étapes — clique une étape, puis un emplacement</span>${pool.map(j => `<button class="tag ${st.sel===j?'sel':''}" onclick="pickStep(${j})">${all[j]}</button>`).join('') || '<span class="muted">—</span>'}</div><div class="slots">`;
+  Q.steps.forEach((_,s) => {
+    const lk = st.lock[s], j = st.place[s];
+    let inner = '<span class="muted" style="font-size:.9rem">emplacement libre</span>';
+    if (lk === 'ok' || lk === 'ok2') inner = `<span class="tag ${lk}">${Q.steps[s]}</span>`;
+    else if (lk === 'ko') inner = `<span class="tag ko">${j!==undefined?`<s>${all[j]}</s>`:'—'}<span class="fix">→ ${Q.steps[s]}</span></span>`;
+    else if (j !== undefined) inner = `<span class="tag">${all[j]}</span>`;
+    h += `<div class="slot" onclick="dropSlot(${s})"><span class="n">${s+1}</span>${inner}</div>`;
+  });
+  return h + '</div>';
+}
+function pickStep(j){ const st = S(APP.level,APP.q); if (st.done) return; st.sel = st.sel === j ? null : j; renderScreen(); }
+function dropSlot(s){
+  const st = S(APP.level,APP.q); if (st.done || st.lock[s]) return;
+  if (st.sel === null) { if (st.place[s] !== undefined) { delete st.place[s]; renderScreen(); } return; }
+  st.place[s] = st.sel; st.sel = null; renderScreen();
+}
+function verifyOrdre(l,i,Q,st){
+  const open = Q.steps.map((_,s) => s).filter(s => !st.lock[s]);
+  if (open.some(s => st.place[s] === undefined)) { st.fb = '☝️ Remplis tous les emplacements avant de vérifier.'; st.fbc='info'; return; }
+  open.forEach(s => { const good = st.place[s] === s;
+    if (st.att === 0) { if (good) st.lock[s] = 'ok'; else delete st.place[s]; }
+    else st.lock[s] = good ? 'ok2' : 'ko'; });
+  itemsAfterCheck(l,i,Q,st, Q.steps.length, [], 'étapes à la bonne place (verrouillées). Les autres sont revenues dans la réserve.');
+}
+
+/* Texte à trous */
+function rTrous(Q,st,l,i){
+  const bank = Q.answers.concat(Q.distract);
+  if (!st.order) st.order = shuffled(bank.length, l*31 + i*7 + 11);
+  const used = Object.values(st.place);
+  const pool = st.order.filter(j => !used.includes(j));
+  const parts = Q.text.split(/\{(\d+)\}/);
+  let txt = '';
+  parts.forEach((p,k) => {
+    if (k % 2 === 0) { txt += p; return; }
+    const b = +p, lk = st.lock[b], j = st.place[b];
+    if (lk === 'ok' || lk === 'ok2') txt += `<span class="blank ${lk}">${Q.answers[b]}</span>`;
+    else if (lk === 'ko') txt += `<span class="blank ko"><s>${j!==undefined?bank[j]:'…'}</s> <span class="fix">${Q.answers[b]}</span></span>`;
+    else txt += `<span class="blank" onclick="dropBlank(${b})" onkeydown="if(event.key==='Enter')dropBlank(${b})" role="button" tabindex="0">${j!==undefined?bank[j]:'&nbsp;'}</span>`;
+  });
+  return `<div class="pool"><span class="lbl">Banque de mots — clique un mot, puis un trou</span>${pool.map(j => `<button class="tag ${st.sel===j?'sel':''}" onclick="pickWord(${j})">${bank[j]}</button>`).join('') || '<span class="muted">—</span>'}</div><div class="trous">${txt}</div>`;
+}
+function pickWord(j){ const st = S(APP.level,APP.q); if (st.done) return; st.sel = st.sel === j ? null : j; renderScreen(); }
+function dropBlank(b){
+  const st = S(APP.level,APP.q); if (st.done || st.lock[b]) return;
+  if (st.sel === null) { if (st.place[b] !== undefined) { delete st.place[b]; renderScreen(); } return; }
+  st.place[b] = st.sel; st.sel = null; renderScreen();
+}
+function verifyTrous(l,i,Q,st){
+  const bank = Q.answers.concat(Q.distract);
+  const open = Q.answers.map((_,b) => b).filter(b => !st.lock[b]);
+  if (open.some(b => st.place[b] === undefined)) { st.fb = '☝️ Remplis tous les trous avant de vérifier.'; st.fbc='info'; return; }
+  open.forEach(b => { const good = bank[st.place[b]] === Q.answers[b];
+    if (st.att === 0) { if (good) { st.lock[b] = 'ok'; } else delete st.place[b]; }
+    else st.lock[b] = good ? 'ok2' : 'ko'; });
+  itemsAfterCheck(l,i,Q,st, Q.answers.length, [], 'mots bien placés (verrouillés). Les autres sont revenus dans la banque.');
+}
+
+/* Chasse aux erreurs */
+function rChasse(Q,st){
+  if (!st.sel || typeof st.sel !== 'object') st.sel = {};
+  return `<div class="doc"><h4>📝 ${Q.docTitle}</h4>` + Q.lines.map((ln,j) => {
+    const lk = st.lock[j];
+    if (lk) return `<span class="line ${lk}">${ln.t}${lk==='ko'||lk==='ok'||lk==='ok2' ? `<span class="fix">✏️ ${ln.fix}</span>` : ''}</span>`;
+    if (st.done) return `<span class="line ${st.fa[j]?'fa':''}">${ln.t}</span>`;
+    return `<button class="line ${st.sel[j]?'sel':''} ${st.fa[j]?'fa':''}" onclick="toggleLine(${j})">${ln.t}</button>`;
+  }).join('') + '</div>';
+}
+function toggleLine(j){ const st = S(APP.level,APP.q); if (st.done) return; st.sel[j] = !st.sel[j]; renderScreen(); }
+function verifyChasse(l,i,Q,st){
+  let fa = 0;
+  Q.lines.forEach((ln,j) => {
+    if (st.lock[j]) return;
+    if (st.sel[j] && ln.err) st.lock[j] = st.att === 0 ? 'ok' : 'ok2';
+    else if (st.sel[j] && !ln.err) { fa++; st.fa[j] = true; st.sel[j] = false; }
+  });
+  st.penalty += fa;
+  if (st.att === 1) Q.lines.forEach((ln,j) => { if (ln.err && !st.lock[j]) st.lock[j] = 'ko'; });
+  const faMsg = fa ? ` ⚠️ ${fa} fausse${fa>1?'s':''} alerte${fa>1?'s':''} (−${fa} XP).` : '';
+  const found = Q.lines.filter((ln,j) => ln.err && (st.lock[j]==='ok'||st.lock[j]==='ok2')).length;
+  if (found === Q.n || st.att === 1) { st.att++; itemFinish(l,i,Q,st, Q.n, faMsg, 3); }
+  else { st.att = 1; st.fb = `🔎 ${found} erreur${found>1?'s':''} sur ${Q.n} trouvée${found>1?'s':''} (verrouillée${found>1?'s':''} en vert).${faMsg} 💡 ${Q.hint}`; st.fbc = 'info'; wrongFx(); }
+}
+
+/* ----- Vérification commune ----- */
+function verify(){
+  const l = APP.level, i = APP.q, Q = getQ(l,i), st = S(l,i);
+  if (st.done) return;
+  ({ multi:verifyMulti, fields:verifyFields, classement:verifyClassement, appariement:verifyApp, ordre:verifyOrdre, trous:verifyTrous, chasse:verifyChasse })[Q.type](l,i,Q,st);
+  renderScreen();
+}
+/* Après une vérification d'un exercice à éléments (règle 3.8) */
+function itemsAfterCheck(l,i,Q,st, n, trapMsgs, okText){
+  const nOk = Object.values(st.lock).filter(v => v==='ok'||v==='ok2').length;
+  if (st.att === 0 && nOk < n) {
+    st.att = 1;
+    st.fb = `🔎 ${nOk} / ${n} ${okText} 💡 ${Q.hint}` + (trapMsgs.length ? '<br>🧐 ' + [...new Set(trapMsgs)].join('<br>🧐 ') : '');
+    st.fbc = 'info'; wrongFx(); return;
+  }
+  st.att++;
+  itemFinish(l,i,Q,st, n, trapMsgs.length && nOk < n ? '<br>🧐 ' + [...new Set(trapMsgs)].join('<br>🧐 ') : '', ELEMENT_PTS);
+}
+/* Barème par élément + statut (factorisé pour tous les exercices à éléments) */
+function itemFinish(l,i,Q,st, n, extra, per){
+  const locks = Object.values(st.lock);
+  const ok = locks.filter(v => v==='ok').length, ok2 = locks.filter(v => v==='ok2').length;
+  let earned = ok*per + ok2*per/2 - (st.penalty||0);
+  earned = Math.max(0, earned);
+  const status = ok === n ? 'correct' : (ok + ok2 === n ? 'hint' : 'shown');
+  finishSimple(l,i,status,earned);
+  if (status === 'correct') { st.fb = '✅ Tout est juste du premier coup ! ' + Q.expl + (extra||''); st.fbc = 'good'; }
+  else if (status === 'hint') { st.fb = '✅ Tout est juste après correction (moitié des points pour les éléments corrigés). ' + Q.expl + (extra||''); st.fbc = 'mid'; }
+  else { st.fb = '👁 Les corrections sont affichées en rouge. ' + Q.expl + (extra||''); st.fbc = 'bad'; wrongFx(); }
+}
+/* Fin d'une question : points, série, effets, badges */
+function finishSimple(l,i,status,earned){
+  const st = S(l,i); if (st.done) return;
+  st.done = true; st.status = status; st.earned = earned;
+  const before = APP.score;
+  APP.score += earned;
+  if (status === 'correct') { APP.streak++; APP.bestStreak = Math.max(APP.bestStreak, APP.streak); }
+  else APP.streak = 0;
+  if (earned > 0) goodFx(earned, status === 'correct');
+  const Q = getQ(l,i);
+  if (APP.streak >= 5) award('serie5');
+  if (Q.type==='fields' && Q.title==='Exercice supplémentaire B' && status==='correct') award('lineaire');
+  if (Q.type==='chasse' && status==='correct' && !st.penalty) award('lynx');
+  checkRank(before);
+}
+function nextQuestion(){
+  const l = APP.level, n = LEVELS[l].questions.length;
+  if (APP.q < n-1) { APP.q++; setScreen('question'); }
+  else completeLevel(l);
+}
+
+/* ----- Fin de mission ----- */
+function completeLevel(l){
+  if (!APP.completed.has(l)) {
+    APP.completed.add(l);
+    const st = levelStats(l);
+    if (l === 0) award('m1');
+    if (st.c === st.n) award('parfait');
+    if (predBucket(st.first) === APP.pred[l]) award('estim');
+    if (APP.completed.size === LEVELS.length) { award('fin'); if (globalFirst() >= .85) award('expert'); }
+    const result = stopExerciseTimer(l); APP.timerLevel = null;
+    if (result) sendResult('Mission ' + (l+1) + ' — ' + LEVELS[l].title, result.points, LEVELS[l].maxPoints, result.temps);
+    if (st.first >= .7) confetti();
+    tone(523,0,.12); tone(659,.12,.12); tone(784,.24,.12); tone(1047,.36,.25);
+  }
+  APP.level = l; setScreen('bilan');
+}
+const predBucket = r => r >= .875 ? 'toutes' : r >= .625 ? 'troisquarts' : r >= .375 ? 'moitie' : 'peu';
+function globalFirst(){ let c = 0; LEVELS.forEach((lv,l) => c += levelStats(l).c); return c / TOTAL_Q; }
+
+function renderBilan(l){
+  const lv = LEVELS[l], st = levelStats(l), g = gradeOf(st.first);
+  const p = APP.pred[l], b = predBucket(st.first);
+  let predTxt = '';
+  if (p) {
+    predTxt = `Tu avais prédit <b>${PRED[p].t}</b> ; tu as réussi <b>${st.c}/${st.n}</b> du premier coup. `;
+    if (b === p) predTxt += 'Bonne estimation, tu te connais bien ! 🎯';
+    else if ((PRED[p].v) < st.first) predTxt += 'Tu as fait mieux que prévu : tu peux te faire davantage confiance.';
+    else predTxt += 'Un peu moins que prévu : repère les questions où tu as hésité et relis leur explication.';
+  }
+  const next = l < LEVELS.length-1;
+  return `<div class="card center">
+    <span class="medal">${medalOf(st.first)}</span>
+    <div class="qtag">Bilan de la mission ${l+1}</div>
+    <h2>${lv.icon} ${lv.title}</h2>
+    <div class="grade ${g[0]}">${g[0]} — ${g[1]}</div>
+    <div style="font-size:1.6rem;color:var(--gold);margin-top:8px;letter-spacing:4px">${starsOf(st.first)}</div>
+    <p style="margin-top:6px"><b>${fmtXP(st.pts)}</b> / ${lv.maxPoints} XP gagnés · ${Math.round(st.first*100)} % de réussite au 1er essai</p>
+    <div class="legend"><span><i style="background:var(--success)"></i>1er coup</span><span><i style="background:var(--orange)"></i>2e essai</span><span><i style="background:var(--error)"></i>réponse montrée</span></div>
+    <table class="rtable"><tr><th>Mission</th><th>✅</th><th>🔄</th><th>👁</th><th>Total</th></tr>
+      <tr><td>${lv.title}</td><td>${st.c}</td><td>${st.h}</td><td>${st.s}</td><td>${st.n}</td></tr></table>
+    ${predTxt ? `<div class="box ex" style="text-align:left;margin-top:16px"><div class="bt">🔮 Ta prédiction</div>${predTxt}</div>` : ''}
+    <div class="actions" style="justify-content:center">
+      <button class="btn ghost" onclick="goHub()">🗺️ Parcours</button>
+      ${next ? `<button class="btn" onclick="goLevel(${l+1})">Mission suivante ➜</button>` : `<button class="btn orange" onclick="goHub()">🏁 Voir mon bilan final</button>`}
+    </div></div>`;
+}
+
+/* ----- Bilan final (en tête du parcours) ----- */
+function bilanIndicateurs(){
+  const acc = {};
+  LEVELS.forEach((lv,l) => lv.questions.forEach((q,i) => {
+    const a = acc[q.ind] || (acc[q.ind] = {pts:0,max:0});
+    a.max += q.pts; a.pts += (APP.qs[l+'_'+i] && APP.qs[l+'_'+i].earned) || 0;
+  }));
+  const statut = r => r >= .8 ? 'atteint' : r >= .5 ? 'encours' : 'nonatteint';
+  return CRITERES.map(c => {
+    const inds = c.indicateurs.map(ind => { const a = acc[ind.id] || {pts:0,max:0}; const r = a.max ? a.pts/a.max : 0; return Object.assign({}, ind, {ratio:r, statut:statut(r)}); });
+    const tot = c.indicateurs.reduce((t,ind) => { const a = acc[ind.id] || {pts:0,max:0}; return {pts:t.pts+a.pts, max:t.max+a.max}; }, {pts:0,max:0});
+    const r = tot.max ? tot.pts/tot.max : 0;
+    return { id:c.id, nom:c.nom, ratio:r, statut:statut(r), indicateurs:inds };
+  });
+}
+const ST_LBL = { atteint:'✅ Atteint', encours:'🟠 En cours d\'acquisition', nonatteint:'❌ Non atteint' };
+function studentName(){ if (!APP.email) return ''; return APP.email.split('@')[0].split(/[._-]/).map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' '); }
+function renderFinal(){
+  const gf = globalFirst(), g = gradeOf(gf), R = RANKS[rankOf(APP.score)];
+  const crit = bilanIndicateurs();
+  const allOk = crit.every(c => c.indicateurs.every(i => i.statut === 'atteint'));
+  if (!APP.finalCelebrated) { APP.finalCelebrated = true; if (gf >= .7) setTimeout(confetti, 300); }
+  let rows = LEVELS.map((lv,l) => { const s = levelStats(l); return `<tr><td>${lv.icon} ${lv.title}</td><td>${s.c}</td><td>${s.h}</td><td>${s.s}</td><td style="color:var(--gold)">${starsOf(s.first)}</td></tr>`; }).join('');
+  let critH = crit.map(c => `<div class="crit"><div class="crit-h"><span>${c.id} — ${c.nom}</span><span class="st ${c.statut}">${ST_LBL[c.statut]}</span></div>` +
+    c.indicateurs.map(i => `<div class="ind"><span>${i.texte} <span class="muted">(${Math.round(i.ratio*100)} %)</span></span><span class="st ${i.statut}">${ST_LBL[i.statut]}</span></div>` +
+      (i.statut !== 'atteint' ? `<div class="revoir">📖 À revoir dans ton cours : <i>${i.chapitre}</i> — relis ${i.revoir}.</div>` : '')).join('') + '</div>').join('');
+  return `<div class="card fiche" style="margin-bottom:10px">
+    <div class="fiche-head"><h2>Les amortissements — Partie 1 · Mon bilan</h2><p>${studentName() ? 'Élève : '+esc(studentName())+' · ' : ''}${APP.classe ? 'Classe : '+esc(APP.classe)+' · ' : ''}Date : ${new Date().toLocaleDateString('fr-BE')}</p></div>
+    <div class="center"><span class="medal">${medalOf(gf)}</span><div class="qtag">Bilan final</div><h2>Parcours terminé !</h2>
+    <div class="grade ${g[0]}">${g[0]} — ${g[1]}</div></div>
+    <div class="kpis">
+      <div class="stat"><b>${fmtXP(APP.score)}</b><span>XP / ${TOTAL_XP}</span></div>
+      <div class="stat"><b>${Math.round(gf*100)} %</b><span>au 1er essai</span></div>
+      <div class="stat"><b>${R.ic}</b><span>${R.n}</span></div>
+      <div class="stat"><b>🔥 ${APP.bestStreak}</b><span>meilleure série</span></div>
+    </div>
+    <div class="legend"><span><i style="background:var(--success)"></i>1er coup</span><span><i style="background:var(--orange)"></i>2e essai</span><span><i style="background:var(--error)"></i>réponse montrée</span></div>
+    <table class="rtable"><tr><th>Mission</th><th>✅</th><th>🔄</th><th>👁</th><th>Étoiles</th></tr>${rows}</table>
+    <p class="muted" style="margin-top:10px">🏅 Badges obtenus : ${APP.badges.size} / ${BADGES.length}</p>
+    <h3 style="margin-top:18px">📋 Ce que tu maîtrises, et ce qu'il te reste à revoir</h3>
+    ${critH}
+    ${allOk ? '<div class="box ex" style="margin-top:12px"><div class="bt">Bravo</div>Tous les indicateurs sont atteints : tu maîtrises la base, le linéaire et le dégressif. Passe aux exercices papier ou au prorata temporis !</div>' : ''}
+    <div class="row noprint" style="justify-content:center;margin-top:18px">
+      <button class="btn ghost" onclick="window.print()">🖨️ Imprimer mon bilan</button>
+      <button class="lbbtn app" onclick="openLB('app')">🏆 Classement</button>
+      <button class="lbbtn glob" onclick="openLB('global')">🌍 Général</button>
+      <button class="btn orange" onclick="restartGame()">🔄 Rejouer</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:10px">
+    <h3>🧪 Labo du linéaire <span class="muted" style="font-weight:400;font-size:.85rem">(bac à sable libre)</span></h3>
+    <p class="muted" style="font-size:.9rem;margin:4px 0 12px">Fais varier la valeur et la durée : observe comment l'annuité et la VCN réagissent.</p>
+    <div class="sim">
+      <label>Valeur d'origine : <b id="simV">20 000 €</b><input type="range" min="1000" max="60000" step="500" value="20000" oninput="simUpdate()" id="simVR"></label>
+      <label>Durée : <b id="simN">5 ans</b><input type="range" min="2" max="10" step="1" value="5" oninput="simUpdate()" id="simNR"></label>
+    </div>
+    <div id="simOut" style="margin-top:12px"></div>
+  </div>`;
+}
+function simUpdate(){
+  const vr = document.getElementById('simVR'); if (!vr) return;
+  const V = +vr.value, N = +document.getElementById('simNR').value, a = V/N;
+  document.getElementById('simV').textContent = fmtE(V) + ' €'; document.getElementById('simN').textContent = N + ' ans';
+  let bars = ''; for (let y = 0; y <= N; y++) { const vcn = V - a*y; bars += `<div title="fin année ${y}: ${fmtE(vcn)} €" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px"><div style="width:100%;height:${Math.max(2,vcn/V*110)}px;background:linear-gradient(180deg,var(--accent),var(--accent2));border-radius:5px"></div><small class="muted">${y===0?'achat':y}</small></div>`; }
+  document.getElementById('simOut').innerHTML = `<p>Taux = 100 / ${N} = <b>${fmtN(Math.round(10000/N)/100)} %</b> · Annuité = <b>${fmtE(a)} €</b></p><div style="display:flex;gap:6px;height:140px;align-items:flex-end;margin-top:8px">${bars}</div><p class="muted" style="font-size:.8rem;text-align:center">VCN en fin d'année</p>`;
+}
+
+function restartGame(){
+  TRACKING.sessionId = new Date().toISOString();
+  resetProgression();
+  APP.globalTimerStart = Date.now();
+  setScreen('hub');
+}
+function resetProgression(){
+  APP.qs = {}; APP.score = 0; APP.streak = 0; APP.bestStreak = 0; APP.completed = new Set(); APP.pred = {}; APP.badges = new Set();
+  APP.rankIdx = 0; APP.finalCelebrated = false; APP.exerciseTimes = {}; APP.exerciseScores = {}; APP.scoreBeforeExercise = 0; APP.exerciseStartTime = null; APP.timerLevel = null;
+  FXQ.length = 0; fxBusy = false; document.getElementById('fxModal').innerHTML = ''; document.getElementById('toast').classList.remove('show');
+  renderScreen();
+}
+
+/* =====================================================================
+   6. EFFETS : particules, XP flottant, combo, confettis, sons, badges, rangs
+   ===================================================================== */
+let lastPt = { x: innerWidth/2, y: innerHeight/2 };
+document.addEventListener('pointerdown', e => { lastPt = { x:e.clientX, y:e.clientY }; }, true);
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function goodFx(earned, first){
+  tone(660,0,.1); tone(990,.1,.14);
+  if (reduced) return;
+  const cols = ['#22d68a','#3fc8ff','#ffd166','#8b7bff','#ff8a3d'];
+  for (let k = 0; k < 16; k++) {
+    const p = document.createElement('div'); p.className = 'particle'; p.style.background = cols[k%cols.length];
+    p.style.left = lastPt.x+'px'; p.style.top = lastPt.y+'px'; document.body.appendChild(p);
+    const ang = Math.random()*Math.PI*2, d = 40 + Math.random()*70;
+    p.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${Math.cos(ang)*d}px,${Math.sin(ang)*d}px)`,opacity:0}],{duration:800,easing:'cubic-bezier(.2,.8,.3,1)'}).onfinish = () => p.remove();
+  }
+  const f = document.createElement('div'); f.className = 'floatxp'; f.textContent = '+' + fmtXP(earned) + ' XP';
+  f.style.left = (lastPt.x-30)+'px'; f.style.top = (lastPt.y-30)+'px'; document.body.appendChild(f); setTimeout(() => f.remove(), 1200);
+  if (first && APP.streak >= 3) {
+    const c = document.createElement('div'); c.className = 'combo';
+    c.textContent = APP.streak >= 10 ? '⚡ INARRÊTABLE ×'+APP.streak : APP.streak >= 5 ? '🔥 EN FEU ×'+APP.streak : '🔥 COMBO ×'+APP.streak;
+    document.body.appendChild(c); setTimeout(() => c.remove(), 1300);
+  }
+}
+function wrongFx(){ APP.fxPending = 'shake'; tone(220,0,.18,'sawtooth',.04); }
+function confetti(){
+  if (reduced) return;
+  const cols = ['#22d68a','#3fc8ff','#ffd166','#8b7bff','#ff8a3d','#ff4d6d'];
+  for (let k = 0; k < 90; k++) {
+    const c = document.createElement('div'); c.className = 'confetti';
+    c.style.left = Math.random()*100+'vw'; c.style.background = cols[k%cols.length];
+    c.style.animationDuration = (2.2 + Math.random()*2)+'s'; c.style.animationDelay = (Math.random()*.6)+'s';
+    document.body.appendChild(c); setTimeout(() => c.remove(), 5000);
+  }
+}
+/* Sons Web Audio (coupés par défaut) */
+let actx = null;
+function tone(freq, start, dur, type, vol){
+  if (!APP.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + start;
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || .08, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur + .02);
+  } catch (e) {}
+}
+function toggleSound(){ APP.sound = !APP.sound; document.getElementById('soundBtn').textContent = APP.sound ? '🔊' : '🔇'; if (APP.sound) tone(784,0,.1); }
+
+/* File d'attente : un seul effet spectaculaire à la fois */
+const FXQ = []; let fxBusy = false;
+function queueFx(item){ FXQ.push(item); runFx(); }
+function runFx(){
+  if (fxBusy || !FXQ.length) return;
+  fxBusy = true; const it = FXQ.shift();
+  if (it.type === 'badge') {
+    const b = BADGES.find(x => x.id === it.id);
+    document.getElementById('toastIcon').textContent = b.ic; document.getElementById('toastTitle').textContent = 'Badge débloqué : ' + b.n; document.getElementById('toastText').textContent = b.c;
+    const t = document.getElementById('toast'); t.classList.add('show'); tone(784,0,.12); tone(988,.12,.12); tone(1319,.24,.2);
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => { fxBusy = false; runFx(); }, 450); }, 3000);
+  } else if (it.type === 'rank') {
+    const R = RANKS[it.r];
+    document.getElementById('fxModal').innerHTML = `<div class="overlay rankup" onclick="if(event.target===this)closeRank()"><div class="rays"></div><div class="modal">
+      <span class="ri">${R.ic}</span><div class="qtag">Promotion !</div><h2 style="margin:6px 0">Tu deviens ${R.n}</h2>
+      <p class="muted">Tu as atteint ${fmtXP(it.score)} XP. Continue : ${RANKS[it.r+1] ? 'prochain rang à '+Math.ceil(RANKS[it.r+1].p*TOTAL_XP)+' XP.' : 'tu as atteint le sommet !'}</p>
+      <button class="btn" style="margin-top:16px" onclick="closeRank()">Continuer ➜</button></div></div>`;
+    confetti(); tone(523,0,.12); tone(659,.12,.12); tone(784,.24,.12); tone(1047,.36,.3);
+  }
+}
+function closeRank(){ document.getElementById('fxModal').innerHTML = ''; fxBusy = false; runFx(); }
+function award(id){ if (APP.badges.has(id)) return; APP.badges.add(id); queueFx({type:'badge', id}); }
+function checkRank(before){
+  const r0 = rankOf(before), r1 = rankOf(APP.score);
+  if (r1 > r0 && r1 > APP.rankIdx) { APP.rankIdx = r1; queueFx({type:'rank', r:r1, score:APP.score}); }
+}
+
+/* =====================================================================
+   7. TRACKING (SPEC_Tracking_Eleves_v5)
+   ===================================================================== */
+const TRACKING = {
+  appName: "Les amortissements — Partie 1",
+  totalNiveaux: LEVELS.length,
+  sessionId: null,
+  scriptUrl: "https://script.google.com/macros/s/AKfycbx9bRMVuHU2mgFLii1KcQXD3LdZahnDH1rf1cWv9RuDvQAt0l3VtLtxzmbH7MtpJWRjfA/exec"
+};
+function showEmailModal() {
+  const overlay = document.getElementById('emailOverlay');
+  overlay.style.display = 'flex';
+  const input = document.getElementById('emailInput');
+  const saved = lsGet('student_email');
+  if (saved) input.value = saved;
+  input.focus();
+  document.getElementById('emailError').textContent = '';
+}
+function validateEmail() {
+  const input = document.getElementById('emailInput');
+  const btn = document.getElementById('emailBtn');
+  const errDiv = document.getElementById('emailError');
+  const email = input.value.trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errDiv.textContent = '⚠️ Entre une adresse email valide.'; input.style.borderColor = '#ff4060'; return;
+  }
+  btn.textContent = '⏳ Vérification…'; btn.disabled = true; errDiv.textContent = ''; input.style.borderColor = '';
+  const cbName = '_emailCb_' + Date.now();
+  const timeout = setTimeout(() => {
+    delete window[cbName]; const s = document.getElementById(cbName); if (s) s.remove();
+    errDiv.textContent = '⚠️ Connexion impossible. Vérifie ta connexion internet.';
+    btn.textContent = '✅ Vérifier et commencer'; btn.disabled = false;
+  }, 10000);
+  window[cbName] = function(resp) {
+    clearTimeout(timeout); delete window[cbName];
+    const s = document.getElementById(cbName); if (s) s.remove();
+    btn.textContent = '✅ Vérifier et commencer'; btn.disabled = false;
+    if (resp && resp.found) {
+      const oldEmail = lsGet('student_email');
+      lsSet('student_email', email);
+      lsSet('student_classe', resp.classe || '');
+      APP.email = email; APP.classe = resp.classe || '';
+      if (oldEmail && oldEmail !== email) resetProgression();
+      TRACKING.sessionId = new Date().toISOString();
+      document.getElementById('emailOverlay').style.display = 'none';
+      startGlobalTimer();
+      renderScreen();
+    } else {
+      errDiv.textContent = "⚠️ Cette adresse email n'est pas enregistrée. Vérifie l'orthographe ou demande à ton professeur de t'ajouter à la liste.";
+      input.style.borderColor = '#ff4060';
+    }
+  };
+  const s = document.createElement('script');
+  s.id = cbName;
+  s.src = `${TRACKING.scriptUrl}?action=check_email&email=${encodeURIComponent(email)}&callback=${cbName}`;
+  s.onerror = () => { clearTimeout(timeout); delete window[cbName]; s.remove(); errDiv.textContent = '⚠️ Erreur de connexion au serveur.'; btn.textContent = '✅ Vérifier et commencer'; btn.disabled = false; };
+  document.body.appendChild(s);
+}
+function startGlobalTimer() {
+  APP.globalTimerStart = Date.now();
+  const el = document.getElementById('globalTimer'); if (el) el.style.display = 'inline-flex';
+  clearInterval(APP.globalTimerInterval);
+  APP.globalTimerInterval = setInterval(updateTimerDisplay, 1000); updateTimerDisplay();
+}
+function updateTimerDisplay() {
+  const el = document.getElementById('globalTimer'); if (!el || !APP.globalTimerStart) return;
+  const elapsed = Math.floor((Date.now() - APP.globalTimerStart) / 1000);
+  el.textContent = '⏱️ ' + String(Math.floor(elapsed/60)).padStart(2,'0') + ':' + String(elapsed%60).padStart(2,'0');
+}
+function startExerciseTimer(exIdx) { APP.exerciseStartTime = Date.now(); APP.scoreBeforeExercise = APP.score || 0; }
+function stopExerciseTimer(exIdx) {
+  if (!APP.exerciseStartTime) return null;
+  const tempsSec = Math.round((Date.now() - APP.exerciseStartTime) / 1000);
+  APP.exerciseTimes[exIdx] = tempsSec; APP.exerciseStartTime = null;
+  const deltaPoints = (APP.score || 0) - APP.scoreBeforeExercise;
+  APP.exerciseScores[exIdx] = deltaPoints;
+  return { points: deltaPoints, temps: tempsSec };
+}
+function sendResult(niveau, points, pointsMax, temps) {
+  if (!APP.email) return;
+  const payload = { email: APP.email, classe: APP.classe, app: TRACKING.appName, niveau: niveau, points: points, pointsMax: pointsMax, temps: temps, totalNiveaux: TRACKING.totalNiveaux, sessionId: TRACKING.sessionId };
+  console.log('[TRACKING] Envoi:', payload);
+  fetch(TRACKING.scriptUrl, { method:"POST", mode:"no-cors", headers:{ "Content-Type":"text/plain" }, body: JSON.stringify(payload) })
+    .catch(err => console.warn('[TRACKING] Erreur:', err));
+}
+let currentLBTab = 'app';
+function openLB(tab) { document.getElementById('lbOverlay').style.display = 'block'; switchLBTab(tab || 'app'); }
+function closeLB() { document.getElementById('lbOverlay').style.display = 'none'; }
+function switchLBTab(tab) {
+  currentLBTab = tab;
+  const btnApp = document.getElementById('lbTabApp'), btnGlobal = document.getElementById('lbTabGlobal');
+  const cl = APP.classe ? ' (' + APP.classe + ')' : '';
+  document.getElementById('lbTitle').textContent = tab === 'app' ? '🏆 Classement — ' + TRACKING.appName + cl : '🌍 Classement général' + cl;
+  if (tab === 'app') { btnApp.style.background = 'var(--accent)'; btnApp.style.color = '#0f1117'; btnGlobal.style.background = 'transparent'; btnGlobal.style.color = 'var(--orange)'; }
+  else { btnGlobal.style.background = 'var(--orange)'; btnGlobal.style.color = '#0f1117'; btnApp.style.background = 'transparent'; btnApp.style.color = 'var(--accent)'; }
+  fetchLeaderboard(tab);
+}
+function fetchLeaderboard(tab) {
+  const content = document.getElementById('lbContent');
+  content.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">⏳ Chargement…</div>';
+  const action = tab === 'app' ? 'leaderboard_app' : 'leaderboard_global';
+  const cbName = '_lbCb_' + Date.now();
+  const timeout = setTimeout(() => {
+    delete window[cbName]; const s = document.getElementById(cbName); if (s) s.remove();
+    content.innerHTML = '<div style="text-align:center;padding:40px;"><div style="color:#ff4060;margin-bottom:12px;">⚠️ Connexion impossible</div><button onclick="fetchLeaderboard(\''+tab+'\')" style="padding:8px 20px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-family:inherit;">Réessayer</button></div>';
+  }, 10000);
+  window[cbName] = function(resp) {
+    clearTimeout(timeout); delete window[cbName];
+    const s = document.getElementById(cbName); if (s) s.remove();
+    const lbData = resp && (resp.leaderboard || resp.data);
+    if (!lbData || lbData.length === 0) { content.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">🏁 Aucun résultat pour le moment</div>'; return; }
+    renderLeaderboard(lbData, tab);
+  };
+  let url = `${TRACKING.scriptUrl}?action=${action}&callback=${cbName}&mode=last`;
+  if (tab === 'app') url += `&app=${encodeURIComponent(TRACKING.appName)}`;
+  if (APP.classe) url += `&classe=${encodeURIComponent(APP.classe)}`;
+  const s = document.createElement('script'); s.id = cbName; s.src = url;
+  s.onerror = () => { clearTimeout(timeout); delete window[cbName]; s.remove(); content.innerHTML = '<div style="text-align:center;padding:40px;color:#ff4060;">⚠️ Erreur de connexion</div>'; };
+  document.body.appendChild(s);
+}
+function renderLeaderboard(data, tab) {
+  const content = document.getElementById('lbContent');
+  const myEmail = (APP.email || '').toLowerCase();
+  if (tab === 'global' && data.length > 0) {
+    data = data.slice().sort((a, b) => { const pa = (a.pct != null ? a.pct : (a.pourcentage || 0)), pb = (b.pct != null ? b.pct : (b.pourcentage || 0)); if (pb !== pa) return pb - pa; return (a.totalTemps || a.totalTime || 0) - (b.totalTemps || b.totalTime || 0); });
+    data.forEach((entry, i) => { entry.rang = i + 1; });
+  }
+  const me = data.find(r => (r.email || '').toLowerCase() === myEmail);
+  let html = '';
+  if (me) {
+    const pct = me.pct != null ? me.pct : (me.pourcentage != null ? me.pourcentage : 0);
+    const count = tab === 'app' ? (me.niveauxCompletes || me.niveaux || 0) : (me.appsCompletes || me.apps || 0);
+    const total = tab === 'app' ? (me.totalNiveaux || 0) : (me.totalPossibleNiveaux || 0);
+    const label = tab === 'app' ? 'niveaux' : 'apps';
+    const prog = total > 0 ? count + '/' + total + ' ' + label : count + ' ' + label;
+    html += `<div style="background:rgba(34,214,138,0.08);border:1px solid rgba(34,214,138,0.3);border-radius:12px;padding:16px;margin-bottom:16px;display:flex;justify-content:space-around;text-align:center;gap:8px;flex-wrap:wrap;">
+      <div><div style="font-size:1.3rem;font-weight:800;color:var(--accent);">#${me.rang}</div><div style="font-size:0.7rem;color:var(--text2);">RANG</div></div>
+      <div><div style="font-size:1.3rem;font-weight:800;">${me.totalPoints}</div><div style="font-size:0.7rem;color:var(--text2);">POINTS</div></div>
+      <div><div style="font-size:1.3rem;font-weight:800;color:${pct>=80?'#22d68a':pct>=50?'#ff8a3d':'#ff4060'};">${pct}%</div><div style="font-size:0.7rem;color:var(--text2);">RÉUSSITE</div></div>
+      <div><div style="font-size:1.3rem;font-weight:800;color:var(--text2);">${prog}</div><div style="font-size:0.7rem;color:var(--text2);">PROGRESSION</div></div></div>`;
+  }
+  const medals = ['🥇','🥈','🥉'];
+  html += '<table><tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:8px 4px;color:var(--text2);font-size:0.72rem;">#</th><th style="text-align:left;padding:8px 4px;color:var(--text2);font-size:0.72rem;">Élève</th><th style="text-align:left;padding:8px 4px;color:var(--text2);font-size:0.72rem;">Progression</th><th style="text-align:right;padding:8px 4px;color:var(--text2);font-size:0.72rem;">Pts</th><th style="text-align:right;padding:8px 4px;color:var(--text2);font-size:0.72rem;">%</th><th style="text-align:right;padding:8px 4px;color:var(--text2);font-size:0.72rem;">Temps</th></tr>';
+  data.forEach(row => {
+    const r = row.rang || 0;
+    const name = (row.email || '').split('@')[0].split(/[._-]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    const pct = row.pct != null ? row.pct : (row.pourcentage != null ? row.pourcentage : 0);
+    const temps = row.totalTemps || row.totalTime || 0;
+    const count = tab === 'app' ? (row.niveauxCompletes || row.niveaux || 0) : (row.appsCompletes || row.apps || 0);
+    const total = tab === 'app' ? (row.totalNiveaux || 0) : (row.totalPossibleNiveaux || 0);
+    const w = total > 0 ? Math.min(100, Math.round(count / total * 100)) : 0;
+    const isMe = (row.email || '').toLowerCase() === myEmail;
+    const pctC = pct >= 80 ? '#22d68a' : pct >= 50 ? '#ff8a3d' : '#ff4060';
+    let tStr = '—'; if (temps > 0) { const m = Math.floor(temps/60), s = temps % 60; tStr = m > 0 ? m + 'm' + String(s).padStart(2,'0') + 's' : s + 's'; }
+    html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);background:${isMe?'rgba(34,214,138,0.08)':'transparent'};"><td style="padding:8px 4px;font-weight:700;">${r<=3?medals[r-1]:r}</td><td style="padding:8px 4px;${isMe?'font-weight:800;color:var(--accent);':''}">${esc(name)}</td><td style="padding:8px 4px;"><div style="background:var(--bg3);border-radius:99px;height:6px;width:70px;overflow:hidden"><div style="height:100%;width:${w}%;background:var(--accent)"></div></div><span style="font-size:.7rem;color:var(--text2)">${count}/${total||'?'}</span></td><td style="padding:8px 4px;text-align:right;font-weight:700;color:var(--accent);">${row.totalPoints}</td><td style="padding:8px 4px;text-align:right;font-weight:700;color:${pctC};">${pct}%</td><td style="padding:8px 4px;text-align:right;color:var(--text2);font-family:monospace;font-size:0.78rem;">${tStr}</td></tr>`;
+  });
+  html += '</table>';
+  content.innerHTML = html;
+}
+
+/* =====================================================================
+   8. DÉMARRAGE
+   ===================================================================== */
+function init(){
+  renderScreen();
+  showEmailModal();   // toujours, même si un email est mémorisé
+}
+init();
+</script>
+</body>
+</html>
